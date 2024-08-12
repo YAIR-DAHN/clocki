@@ -1,0 +1,40 @@
+name: alarm_example
+description: Demonstrates how to use the alarm plugin.
+version: 0.1.2
+
+publish_to: 'none'
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  alarm:
+    path: ../
+  audioplayers: ^5.2.1
+  cupertino_icons: ^1.0.2
+  dynamic_color: ^1.7.0
+  file_picker: ^8.0.0+1
+  flutter:
+    sdk: flutter
+  flutter_localization: ^0.2.1
+  google_fonts: ^6.2.1
+  lottie: ^3.1.2
+  permission_handler: ^11.1.0
+  
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  very_good_analysis: ^5.1.0
+
+flutter:
+
+  uses-material-design: true
+
+  assets:
+    - assets/mozart.mp3
+    - assets/nokia.mp3
+    - assets/one_piece.mp3
+    - assets/star_wars.mp3
+    - assets/marimba.mp3
+    - assets/bell.json
