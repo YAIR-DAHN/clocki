@@ -101,7 +101,7 @@ class MyApp extends StatelessWidget {
               foregroundColor: darkColorScheme.onPrimaryContainer,
             ),
           ),
-          home: const HomeScreen(),
+          home: HomeScreen(),
           localizationsDelegates: const [
             GlobalMaterialLocalizations.delegate,
             GlobalWidgetsLocalizations.delegate,

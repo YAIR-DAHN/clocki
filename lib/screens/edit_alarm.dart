@@ -19,6 +19,8 @@ class _EditAlarmScreenState extends State<EditAlarmScreen> {
   late String _customText;
   late String _selectedGame;
   late int _requiredScore;
+  late double _volume;
+  late bool _useSystemVolume;
 
   final List<String> _daysOfWeek = ['א', 'ב', 'ג', 'ד', 'ה', 'ו', 'ש'];
   final List<bool> _selectedDays = List.filled(7, false);
@@ -46,6 +48,8 @@ class _EditAlarmScreenState extends State<EditAlarmScreen> {
       _customText = '';
       _selectedGame = 'snake';
       _requiredScore = 5;
+      _volume = widget.alarmSettings?.volume ?? 1.0;
+      _useSystemVolume = widget.alarmSettings?.volume == null;
     } else {
       _alarmTime = DateTime.now().add(const Duration(minutes: 1));
       _isRepeating = false;
@@ -54,6 +58,8 @@ class _EditAlarmScreenState extends State<EditAlarmScreen> {
       _customText = '';
       _selectedGame = 'snake';
       _requiredScore = 5;
+      _volume = widget.alarmSettings?.volume ?? 1.0;
+      _useSystemVolume = widget.alarmSettings?.volume == null;
     }
   }
 
@@ -61,32 +67,36 @@ class _EditAlarmScreenState extends State<EditAlarmScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-  title: Text(
-    widget.alarmSettings == null ? 'הוספת התראה' : 'עריכת התראה',
-    style: TextStyle(fontWeight: FontWeight.bold),
-  ),
-  elevation: 0,
-  backgroundColor: Theme.of(context).colorScheme.primary,
-  foregroundColor: Theme.of(context).colorScheme.onPrimary,
-  actions: [
-    if (widget.alarmSettings != null)
-      IconButton(
-        icon: Icon(Icons.delete),
-        onPressed: _deleteAlarm,
+        title: Text(
+          widget.alarmSettings == null ? 'הוספת התראה' : 'עריכת התראה',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        elevation: 0,
+        backgroundColor: Theme.of(context).colorScheme.primary,
+        foregroundColor: Theme.of(context).colorScheme.onPrimary,
+        actions: [
+          if (widget.alarmSettings != null)
+            IconButton(
+              icon: Icon(Icons.delete),
+              onPressed: _deleteAlarm,
+            ),
+        ],
       ),
-  ],
-),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            _buildTitle(),
             _buildTimePicker(),
-            SizedBox(height: 24),
-            _buildRepeatOption(),
-            SizedBox(height: 24),
-            _buildSoundSelection(),
-            SizedBox(height: 24),
+            // SizedBox(height: 24),
+            // _buildRepeatOption(),
+            // SizedBox(height: 24),
+            _buildSoundAndVolumeSelection(),
+            // _buildSoundSelection(),
+            // SizedBox(: 24),
+            // _buildVolumeSelection(), // הוספנו את זה
+            // SizedBox(height: 24),
             _buildAlarmOffMethod(),
             SizedBox(height: 32),
             _buildSaveButton(),
@@ -101,6 +111,38 @@ class _EditAlarmScreenState extends State<EditAlarmScreen> {
       await Alarm.stop(widget.alarmSettings!.id);
       Navigator.of(context).pop(true);
     }
+  }
+
+  Widget _buildTitle() {
+    return Card(
+      elevation: 4,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('שם ההתראה', style: Theme.of(context).textTheme.titleLarge),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8.0),
+              child: TextFormField(
+                decoration: InputDecoration(
+                  labelText: 'הזן שם להתראה',
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8)),
+                ),
+                initialValue: _customText,
+                onChanged: (value) {
+                  setState(() {
+                    _customText = value;
+                  });
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Widget _buildTimePicker() {
@@ -135,7 +177,8 @@ class _EditAlarmScreenState extends State<EditAlarmScreen> {
               child: Container(
                 padding: EdgeInsets.symmetric(vertical: 12, horizontal: 16),
                 decoration: BoxDecoration(
-                  border: Border.all(color: Theme.of(context).colorScheme.primary),
+                  border:
+                      Border.all(color: Theme.of(context).colorScheme.primary),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Row(
@@ -145,27 +188,12 @@ class _EditAlarmScreenState extends State<EditAlarmScreen> {
                       TimeOfDay.fromDateTime(_alarmTime).format(context),
                       style: Theme.of(context).textTheme.headlineSmall,
                     ),
-                    Icon(Icons.access_time, color: Theme.of(context).colorScheme.primary),
+                    Icon(Icons.access_time,
+                        color: Theme.of(context).colorScheme.primary),
                   ],
                 ),
               ),
             ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildRepeatOption() {
-    return Card(
-      elevation: 4,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('חזרה', style: Theme.of(context).textTheme.titleLarge),
             SwitchListTile(
               title: Text('חזור על ההתראה'),
               value: _isRepeating,
@@ -177,7 +205,8 @@ class _EditAlarmScreenState extends State<EditAlarmScreen> {
             ),
             if (_isRepeating)
               Wrap(
-                spacing: 8.0,
+                spacing: 4,
+                runSpacing: 5,
                 children: List.generate(7, (index) {
                   return FilterChip(
                     label: Text(_daysOfWeek[index]),
@@ -187,7 +216,8 @@ class _EditAlarmScreenState extends State<EditAlarmScreen> {
                         _selectedDays[index] = selected;
                       });
                     },
-                    selectedColor: Theme.of(context).colorScheme.primary.withOpacity(0.7),
+                    selectedColor:
+                        Theme.of(context).colorScheme.primary.withOpacity(0.7),
                   );
                 }),
               ),
@@ -197,73 +227,122 @@ class _EditAlarmScreenState extends State<EditAlarmScreen> {
     );
   }
 
-  Widget _buildSoundSelection() {
-  return Card(
-    elevation: 4,
-    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-    child: Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('צליל התראה', style: Theme.of(context).textTheme.titleLarge),
-          SizedBox(height: 16),
-          DropdownButtonFormField<String>(
-            decoration: InputDecoration(
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-              contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            ),
-            value: _alarmSound,
-            onChanged: (String? newValue) {
-              setState(() {
-                if (newValue == 'custom') {
-                  _pickCustomSound();
-                } else {
-                  _alarmSound = newValue!;
-                }
-              });
-            },
-            items: [
-              ..._availableSounds.map<DropdownMenuItem<String>>((Map<String, String> sound) {
-                return DropdownMenuItem<String>(
-                  value: 'assets/${sound['file']}',
+  // Widget _buildRepeatOption() {
+  //   return Card(
+  //     elevation: 4,
+  //     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+  //     child: Padding(
+  //       padding: const EdgeInsets.all(16.0),
+  //       child: Column(
+  //         crossAxisAlignment: CrossAxisAlignment.start,
+  //         children: [
+  //           Text('חזרה', style: Theme.of(context).textTheme.titleLarge),
+
+  //         ],
+  //       ),
+  //     ),
+  //   );
+  // }
+
+  Widget _buildSoundAndVolumeSelection() {
+    return Card(
+      elevation: 4,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('צליל התראה', style: Theme.of(context).textTheme.titleLarge),
+            SizedBox(height: 16),
+            DropdownButtonFormField<String>(
+              decoration: InputDecoration(
+                border:
+                    OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                contentPadding: EdgeInsets.symmetric(
+                    horizontal: 16, vertical: 8), // הגדרת גודל התיבה
+              ),
+              value: _alarmSound,
+              onChanged: (String? newValue) {
+                setState(() {
+                  if (newValue == 'custom') {
+                    _pickCustomSound();
+                  } else {
+                    _alarmSound = newValue!;
+                  }
+                });
+              },
+              items: [
+                ..._availableSounds
+                    .map<DropdownMenuItem<String>>((Map<String, String> sound) {
+                  return DropdownMenuItem<String>(
+                    value: 'assets/${sound['file']}',
+                    child: Text(
+                      sound['name']!,
+                      style: TextStyle(
+                          fontSize: 14), // הגדרת גודל הטקסט של הפריטים
+                      overflow:
+                          TextOverflow.ellipsis, // הוספת אליפסיס לטקסט ארוך
+                    ),
+                  );
+                }).toList(),
+                DropdownMenuItem<String>(
+                  value: 'custom',
                   child: Text(
-                    sound['name']!,
-                    style: TextStyle(fontSize: 14), // Smaller font size
-                    overflow: TextOverflow.ellipsis, // Add ellipsis for long text
+                    'בחר קובץ מותאם אישית',
+                    style:
+                        TextStyle(fontSize: 14), // הגדרת גודל הטקסט של הפריטים
+                    overflow: TextOverflow.ellipsis, // הוספת אליפסיס לטקסט ארוך
                   ),
-                );
-              }).toList(),
-              DropdownMenuItem<String>(
-                value: 'custom',
-                child: Text(
-                  'בחר קובץ מותאם אישית',
-                  style: TextStyle(fontSize: 14), // Smaller font size
-                  overflow: TextOverflow.ellipsis, // Add ellipsis for long text
+                ),
+              ],
+              isExpanded: true, // הגדרת התיבה שתתפוס את כל הרוחב הזמין
+            ),
+            if (_alarmSound.startsWith('/'))
+              Padding(
+                padding: const EdgeInsets.only(top: 8.0),
+                child: Container(
+                  width: double.infinity,
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Text(
+                      'קובץ נבחר: ${_alarmSound.split('/').last}',
+                      style: TextStyle(
+                          fontSize: 12), // גודל טקסט קטן יותר לשם הקובץ
+                    ),
+                  ),
                 ),
               ),
-            ],
-            isExpanded: true, // Ensure the dropdown takes full width
-          ),
-          if (_alarmSound.startsWith('/'))
-            Padding(
-              padding: const EdgeInsets.only(top: 8.0),
-              child: Container(
-                width: double.infinity,
-                child: SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Text(
-                    'קובץ נבחר: ${_alarmSound.split('/').last}',
-                    style: TextStyle(fontSize: 12), // Even smaller font for file name
-                  ),
-                ),
-              ),
+            SizedBox(height: 16),
+            // Text('עוצמת קול', style: Theme.of(context).textTheme.titleLarge),
+            SwitchListTile(
+              title: Text('השתמש בעוצמת הקול של המערכת'),
+              value: _useSystemVolume,
+              onChanged: (bool value) {
+                setState(() {
+                  _useSystemVolume = value;
+                });
+              },
             ),
-        ],
+            if (!_useSystemVolume)
+              Slider(
+                value: _volume,
+                min: 0.0,
+                max: 1.0,
+                divisions: 10,
+                label: (_volume * 100).round().toString() + '%',
+                onChanged: (double value) {
+                  setState(() {
+                    _volume = value;
+                  });
+                },
+              ),
+          ],
+        ),
       ),
-    ),
-  );
-}
+    );
+  }
+
   Widget _buildAlarmOffMethod() {
     return Card(
       elevation: 4,
@@ -273,7 +352,26 @@ class _EditAlarmScreenState extends State<EditAlarmScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('שיטת כיבוי התראה', style: Theme.of(context).textTheme.titleLarge),
+            // Text('שם ההתראה', style: Theme.of(context).textTheme.titleLarge),
+            // Padding(
+            //   padding: const EdgeInsets.symmetric(vertical: 8.0),
+            //   child: TextFormField(
+            //     decoration: InputDecoration(
+            //       labelText: 'הזן שם להתראה',
+            //       border: OutlineInputBorder(
+            //           borderRadius: BorderRadius.circular(8)),
+            //     ),
+            //     initialValue: _customText,
+            //     onChanged: (value) {
+            //       setState(() {
+            //         _customText = value;
+            //       });
+            //     },
+            //   ),
+            // ),
+            SizedBox(height: 16),
+            Text('שיטת כיבוי התראה',
+                style: Theme.of(context).textTheme.titleLarge),
             RadioListTile<String>(
               title: Text('סטנדרטי'),
               value: 'standard',
@@ -300,7 +398,8 @@ class _EditAlarmScreenState extends State<EditAlarmScreen> {
                 child: TextFormField(
                   decoration: InputDecoration(
                     labelText: 'הזן טקסט',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8)),
                   ),
                   onChanged: (value) {
                     setState(() {
@@ -334,12 +433,27 @@ class _EditAlarmScreenState extends State<EditAlarmScreen> {
           DropdownButtonFormField<String>(
             decoration: InputDecoration(
               labelText: 'בחר משחק',
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+              labelStyle: TextStyle(fontSize: 14), // הגדרת גודל הטקסט של התווית
+              border:
+                  OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+              contentPadding: EdgeInsets.symmetric(
+                  vertical: 10, horizontal: 10), // הגדרת גודל התיבה
             ),
             value: _selectedGame,
+            isExpanded: true, // הגדרת התיבה שתתפוס את כל הרוחב הזמין
             items: const [
-              DropdownMenuItem(value: 'snake', child: Text('נחש')),
-              DropdownMenuItem(value: 'starwars', child: Text('מלחמת הכוכבים')),
+              DropdownMenuItem(
+                value: 'snake',
+                child: Text('נחש',
+                    style:
+                        TextStyle(fontSize: 14)), // הגדרת גודל הטקסט של הפריטים
+              ),
+              DropdownMenuItem(
+                value: 'starwars',
+                child: Text('מלחמת הכוכבים',
+                    style:
+                        TextStyle(fontSize: 14)), // הגדרת גודל הטקסט של הפריטים
+              ),
             ],
             onChanged: (String? value) {
               setState(() {
@@ -347,11 +461,14 @@ class _EditAlarmScreenState extends State<EditAlarmScreen> {
               });
             },
           ),
-          SizedBox(height: 16),
+          SizedBox(height: 20),
           TextFormField(
             decoration: InputDecoration(
               labelText: 'ניקוד נדרש',
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+              border:
+                  OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+              contentPadding: EdgeInsets.symmetric(
+                  vertical: 10, horizontal: 10), // הגדרת גודל התיבה
             ),
             keyboardType: TextInputType.number,
             initialValue: _requiredScore.toString(),
@@ -367,38 +484,58 @@ class _EditAlarmScreenState extends State<EditAlarmScreen> {
   }
 
   Widget _buildSaveButton() {
-  return Container(
-    width: double.infinity,
-    padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-    child: ElevatedButton(
-      style: ElevatedButton.styleFrom(
-        backgroundColor: Theme.of(context).colorScheme.primary,
-        foregroundColor: Theme.of(context).colorScheme.onPrimary,
-        padding: EdgeInsets.symmetric(vertical: 16),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: ElevatedButton(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Theme.of(context).colorScheme.primary,
+          foregroundColor: Theme.of(context).colorScheme.onPrimary,
+          padding: EdgeInsets.symmetric(vertical: 16),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          elevation: 4,
         ),
-        elevation: 4,
+        onPressed: _saveAlarm,
+        child: Text(
+          'שמור התראה',
+          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+        ),
       ),
-      onPressed: _saveAlarm,
-      child: Text(
-        'שמור התראה',
-        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-      ),
-    ),
-  );
-}
+    );
+  }
+
   void _saveAlarm() async {
-    final id = widget.alarmSettings?.id ?? DateTime.now().millisecondsSinceEpoch % 100000;
-    
+    final id = widget.alarmSettings?.id ??
+        DateTime.now().millisecondsSinceEpoch % 100000;
+
+    final selectedDaysIndices = _selectedDays
+        .asMap()
+        .entries
+        .where((entry) => entry.value)
+        .map((entry) => entry.key)
+        .toList();
+
+    String alarmOffDetails = '';
+    if (_alarmOffMethod == 'text') {
+      alarmOffDetails = _customText;
+    } else if (_alarmOffMethod == 'game') {
+      alarmOffDetails = '$_selectedGame|$_requiredScore';
+    }
+
+    final notificationBody =
+        'זמן להתעורר! $_alarmOffMethod|$_customText|$_selectedGame|$_requiredScore|${selectedDaysIndices.join(',')}';
     final alarmSettings = AlarmSettings(
       id: id,
       dateTime: _alarmTime,
       assetAudioPath: _alarmSound,
       loopAudio: true,
       vibrate: true,
-      notificationTitle: 'התראה',
-      notificationBody: 'זמן להתעורר! ${_alarmOffMethod}|$_customText|$_selectedGame|$_requiredScore',
+      volume: _useSystemVolume ? null : _volume,
+      fadeDuration: 0.0,
+      notificationTitle: _customText.isNotEmpty ? _customText : 'התראה',
+      notificationBody: notificationBody,
       enableNotificationOnKill: true,
     );
 
@@ -413,12 +550,12 @@ class _EditAlarmScreenState extends State<EditAlarmScreen> {
             _alarmTime.hour,
             _alarmTime.minute,
           );
-          
+
           final repeatingAlarmSettings = alarmSettings.copyWith(
             id: id + i + 1,
             dateTime: nextAlarmTime,
           );
-          
+
           await Alarm.set(alarmSettings: repeatingAlarmSettings);
         }
       }

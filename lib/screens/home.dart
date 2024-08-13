@@ -7,6 +7,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'edit_alarm.dart';
 import 'ring.dart';
 import '../widgets/alarm_tile.dart';
+import 'troubleshooting_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -16,7 +17,7 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  late List<AlarmSettings> alarms;
+  late List<AlarmGroup> alarmGroups;
 
   static StreamSubscription<AlarmSettings>? subscription;
 
@@ -31,10 +32,39 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void loadAlarms() {
+    final List<AlarmSettings> alarms = Alarm.getAlarms();
+    final Map<String, AlarmGroup> groupMap = {};
+
+    for (var alarm in alarms) {
+      final key = _getAlarmGroupKey(alarm);
+      if (groupMap.containsKey(key)) {
+        groupMap[key]!.alarms.add(alarm);
+      } else {
+        groupMap[key] = AlarmGroup(
+          baseAlarm: alarm,
+          alarms: [alarm],
+          repeatingDays: _getRepeatingDays(alarm),
+        );
+      }
+    }
+
     setState(() {
-      alarms = Alarm.getAlarms();
-      alarms.sort((a, b) => a.dateTime.isBefore(b.dateTime) ? 0 : 1);
+      alarmGroups = groupMap.values.toList();
+      alarmGroups.sort((a, b) => a.baseAlarm.dateTime.isBefore(b.baseAlarm.dateTime) ? 0 : 1);
     });
+  }
+
+  String _getAlarmGroupKey(AlarmSettings alarm) {
+    final parts = alarm.notificationBody.split('|');
+    return '${alarm.dateTime.hour}:${alarm.dateTime.minute}|${parts.length > 1 ? parts[1] : ""}';
+  }
+
+  List<int> _getRepeatingDays(AlarmSettings alarm) {
+    final parts = alarm.notificationBody.split('|');
+    if (parts.length > 6) {
+      return parts[6].split(',').map((e) => int.parse(e)).toList();
+    }
+    return [];
   }
 
   Future<void> navigateToRingScreen(AlarmSettings alarmSettings) async {
@@ -80,37 +110,65 @@ class _HomeScreenState extends State<HomeScreen> {
     super.dispose();
   }
 
-  void _toggleAlarm(AlarmSettings alarm, bool isActive) async {
-    if (isActive) {
-      await Alarm.set(alarmSettings: alarm);
-    } else {
-      await Alarm.stop(alarm.id);
+  void _toggleAlarmGroup(AlarmGroup alarmGroup, bool isActive) async {
+    for (var alarm in alarmGroup.alarms) {
+      if (isActive) {
+        await Alarm.set(alarmSettings: alarm);
+      } else {
+        await Alarm.stop(alarm.id);
+      }
     }
     loadAlarms();
   }
 
-  @override
+    @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('שעון מעורר חכם', style: Theme.of(context).textTheme.headlineMedium?.copyWith(color: Colors.white)),
+        title: Text('שעון מעורר חכם',
+            style: Theme.of(context)
+                .textTheme
+                .headlineMedium
+                ?.copyWith(color: Colors.white)),
         elevation: 0,
+        actions: [
+          PopupMenuButton<String>(
+            onSelected: (value) {
+              if (value == 'troubleshoot') {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (context) => TroubleshootingScreen()),
+                );
+              }
+            },
+            itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+              const PopupMenuItem<String>(
+                value: 'troubleshoot',
+                child: Text('פתרון בעיות'),
+              ),
+            ],
+          ),
+        ],
       ),
       body: SafeArea(
-        child: alarms.isNotEmpty
+        child: alarmGroups.isNotEmpty
             ? ListView.builder(
-                itemCount: alarms.length,
+                itemCount: alarmGroups.length,
                 itemBuilder: (context, index) {
-                  final alarm = alarms[index];
+                  final alarmGroup = alarmGroups[index];
                   return AlarmTile(
-                    key: Key(alarm.id.toString()),
-                    title: TimeOfDay.fromDateTime(alarm.dateTime).format(context),
-                    subtitle: _getAlarmSubtitle(alarm),
-                    isActive: alarm.dateTime.isAfter(DateTime.now()),
-                    onPressed: () => navigateToAlarmScreen(alarm),
-                    onToggle: (bool value) => _toggleAlarm(alarm, value),
+                    key: Key(alarmGroup.baseAlarm.id.toString()),
+                    title: TimeOfDay.fromDateTime(alarmGroup.baseAlarm.dateTime).format(context),
+                    subtitle: _getAlarmGroupSubtitle(alarmGroup),
+                    isActive: alarmGroup.alarms.any((alarm) => alarm.dateTime.isAfter(DateTime.now())),
+                    onPressed: () => navigateToAlarmScreen(alarmGroup.baseAlarm),
+                    onToggle: (bool value) => _toggleAlarmGroup(alarmGroup, value),
                     onDismissed: () {
-                      Alarm.stop(alarm.id).then((_) => loadAlarms());
+                      for (var alarm in alarmGroup.alarms) {
+                        Alarm.stop(alarm.id);
+                      }
+                      loadAlarms();
                     },
                   );
                 },
@@ -123,7 +181,10 @@ class _HomeScreenState extends State<HomeScreen> {
                     SizedBox(height: 16),
                     Text(
                       'אין התראות מוגדרות',
-                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(color: Colors.grey),
+                      style: Theme.of(context)
+                          .textTheme
+                          .headlineSmall
+                          ?.copyWith(color: Colors.grey),
                     ),
                   ],
                 ),
@@ -138,9 +199,28 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  String _getAlarmSubtitle(AlarmSettings alarm) {
-    // TODO: Implement this method to return a string describing the alarm
-    // (e.g., "כל יום", "חד פעמי", וכו')
-    return "חד פעמי";
+  String _getAlarmGroupSubtitle(AlarmGroup alarmGroup) {
+    final parts = alarmGroup.baseAlarm.notificationBody.split('|');
+    final alarmName = parts.length > 1 && parts[1].isNotEmpty ? parts[1] : "התראה";
+    
+    if (alarmGroup.repeatingDays.isEmpty) {
+      return alarmName;
+    }
+
+    final daysOfWeek = ['א', 'ב', 'ג', 'ד', 'ה', 'ו', 'ש'];
+    final repeatingDays = alarmGroup.repeatingDays.map((day) => daysOfWeek[day]).join(', ');
+    return '$alarmName\nחוזר בימים: $repeatingDays';
   }
+}
+
+class AlarmGroup {
+  final AlarmSettings baseAlarm;
+  final List<AlarmSettings> alarms;
+  final List<int> repeatingDays;
+
+  AlarmGroup({
+    required this.baseAlarm,
+    required this.alarms,
+    required this.repeatingDays,
+  });
 }
