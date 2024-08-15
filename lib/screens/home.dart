@@ -8,6 +8,8 @@ import 'edit_alarm.dart';
 import 'ring.dart';
 import '../widgets/alarm_tile.dart';
 import 'troubleshooting_screen.dart';
+import 'contact_us_screen.dart' as contactUs;
+import 'report_issue_screen.dart' as reportIssue;
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -18,7 +20,6 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   late List<AlarmGroup> alarmGroups;
-
   static StreamSubscription<AlarmSettings>? subscription;
 
   @override
@@ -29,6 +30,13 @@ class _HomeScreenState extends State<HomeScreen> {
     }
     loadAlarms();
     subscription ??= Alarm.ringStream.stream.listen(navigateToRingScreen);
+  }
+
+  Future<void> checkAndroidNotificationPermission() async {
+    final status = await Permission.notification.status;
+    if (status.isDenied) {
+      await Permission.notification.request();
+    }
   }
 
   void loadAlarms() {
@@ -61,10 +69,50 @@ class _HomeScreenState extends State<HomeScreen> {
 
   List<int> _getRepeatingDays(AlarmSettings alarm) {
     final parts = alarm.notificationBody.split('|');
-    if (parts.length > 6) {
-      return parts[6].split(',').map((e) => int.parse(e)).toList();
+    if (parts.length > 4) {
+      return parts[4].split(',').where((s) => s.isNotEmpty).map((e) => int.parse(e)).toList();
     }
     return [];
+  }
+
+  String _getAlarmGroupSubtitle(AlarmGroup alarmGroup) {
+    final parts = alarmGroup.baseAlarm.notificationBody.split('|');
+    if (parts.length < 2) return "התראה"; // אם אין מספיק מידע, נחזיר ערך ברירת מחדל
+
+    final alarmMethod = parts[0].split(' ').last; // מקבל את החלק האחרון אחרי "זמן להתעורר!"
+    final alarmName = parts[1].isNotEmpty ? parts[1] : "התראה";
+
+    String subtitle = alarmName;
+
+    if (alarmMethod != 'standard') {
+      subtitle += ' - ${_getAlarmMethodText(alarmMethod, parts)}';
+    }
+
+    if (alarmGroup.repeatingDays.isNotEmpty) {
+      subtitle += '\n${_getRepeatingDaysText(alarmGroup.repeatingDays)}';
+    }
+
+    return subtitle;
+  }
+
+  String _getAlarmMethodText(String method, List<String> parts) {
+    switch (method) {
+      case 'text':
+        return 'כיבוי על ידי הקלדת טקסט';
+      case 'game':
+        final game = parts[2];
+        final score = parts[3];
+        return 'כיבוי על ידי משחק $game (ניקוד נדרש: $score)';
+      default:
+        return 'כיבוי רגיל';
+    }
+  }
+
+  String _getRepeatingDaysText(List<int> days) {
+    if (days.isEmpty) return '';
+    final daysOfWeek = ["א'", "ב'", "ג'", "ד'", "ה'", "ו'", "ש'"];
+    final repeatingDays = days.map((day) => daysOfWeek[day]).join(" , ");
+    return 'חוזר בימים: $repeatingDays';
   }
 
   Future<void> navigateToRingScreen(AlarmSettings alarmSettings) async {
@@ -83,7 +131,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final res = await showModalBottomSheet<bool?>(
       context: context,
       isScrollControlled: true,
-      shape: RoundedRectangleBorder(
+      shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (context) {
@@ -97,19 +145,6 @@ class _HomeScreenState extends State<HomeScreen> {
     if (res != null && res == true) loadAlarms();
   }
 
-  Future<void> checkAndroidNotificationPermission() async {
-    final status = await Permission.notification.status;
-    if (status.isDenied) {
-      await Permission.notification.request();
-    }
-  }
-
-  @override
-  void dispose() {
-    subscription?.cancel();
-    super.dispose();
-  }
-
   void _toggleAlarmGroup(AlarmGroup alarmGroup, bool isActive) async {
     for (var alarm in alarmGroup.alarms) {
       if (isActive) {
@@ -121,31 +156,57 @@ class _HomeScreenState extends State<HomeScreen> {
     loadAlarms();
   }
 
-    @override
+  @override
+  void dispose() {
+    subscription?.cancel();
+    super.dispose();
+  }
+
+ @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('שעון מעורר חכם',
-            style: Theme.of(context)
-                .textTheme
-                .headlineMedium
-                ?.copyWith(color: Colors.white)),
+        title: Text(
+          'קלוקי - שעון המעורר שלי',
+          style: Theme.of(context).textTheme.headlineMedium?.copyWith(color: Colors.white),
+        ),
         elevation: 0,
         actions: [
           PopupMenuButton<String>(
             onSelected: (value) {
-              if (value == 'troubleshoot') {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                      builder: (context) => TroubleshootingScreen()),
-                );
+              switch (value) {
+                case 'troubleshoot':
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => TroubleshootingScreen()),
+                  );
+                  break;
+                case 'contact':
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => contactUs.ContactUsScreen()),
+                  );
+                  break;
+                case 'report':
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => reportIssue.ContactUsScreen()),
+                  );
+                  break;
               }
             },
             itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
               const PopupMenuItem<String>(
                 value: 'troubleshoot',
                 child: Text('פתרון בעיות'),
+              ),
+              const PopupMenuItem<String>(
+                value: 'contact',
+                child: Text('צור קשר'),
+              ),
+              const PopupMenuItem<String>(
+                value: 'report',
+                child: Text('דיווח על בעיה'),
               ),
             ],
           ),
@@ -177,14 +238,11 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.alarm_off, size: 80, color: Colors.grey),
-                    SizedBox(height: 16),
+                    const Icon(Icons.alarm_off, size: 80, color: Colors.grey),
+                    const SizedBox(height: 16),
                     Text(
                       'אין התראות מוגדרות',
-                      style: Theme.of(context)
-                          .textTheme
-                          .headlineSmall
-                          ?.copyWith(color: Colors.grey),
+                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(color: Colors.grey),
                     ),
                   ],
                 ),
@@ -192,24 +250,11 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => navigateToAlarmScreen(null),
-        child: Icon(Icons.add),
+        child: const Icon(Icons.add),
         elevation: 4,
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
     );
-  }
-
-  String _getAlarmGroupSubtitle(AlarmGroup alarmGroup) {
-    final parts = alarmGroup.baseAlarm.notificationBody.split('|');
-    final alarmName = parts.length > 1 && parts[1].isNotEmpty ? parts[1] : "התראה";
-    
-    if (alarmGroup.repeatingDays.isEmpty) {
-      return alarmName;
-    }
-
-    final daysOfWeek = ['א', 'ב', 'ג', 'ד', 'ה', 'ו', 'ש'];
-    final repeatingDays = alarmGroup.repeatingDays.map((day) => daysOfWeek[day]).join(', ');
-    return '$alarmName\nחוזר בימים: $repeatingDays';
   }
 }
 

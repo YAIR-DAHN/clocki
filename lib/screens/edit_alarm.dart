@@ -245,103 +245,115 @@ class _EditAlarmScreenState extends State<EditAlarmScreen> {
   // }
 
   Widget _buildSoundAndVolumeSelection() {
-    return Card(
-      elevation: 4,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('צליל התראה', style: Theme.of(context).textTheme.titleLarge),
-            SizedBox(height: 16),
-            DropdownButtonFormField<String>(
-              decoration: InputDecoration(
-                border:
-                    OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                contentPadding: EdgeInsets.symmetric(
-                    horizontal: 16, vertical: 8), // הגדרת גודל התיבה
-              ),
-              value: _alarmSound,
-              onChanged: (String? newValue) {
-                setState(() {
-                  if (newValue == 'custom') {
-                    _pickCustomSound();
-                  } else {
-                    _alarmSound = newValue!;
-                  }
-                });
-              },
-              items: [
-                ..._availableSounds
-                    .map<DropdownMenuItem<String>>((Map<String, String> sound) {
-                  return DropdownMenuItem<String>(
-                    value: 'assets/${sound['file']}',
-                    child: Text(
-                      sound['name']!,
-                      style: TextStyle(
-                          fontSize: 14), // הגדרת גודל הטקסט של הפריטים
-                      overflow:
-                          TextOverflow.ellipsis, // הוספת אליפסיס לטקסט ארוך
-                    ),
-                  );
-                }).toList(),
-                DropdownMenuItem<String>(
-                  value: 'custom',
-                  child: Text(
-                    'בחר קובץ מותאם אישית',
-                    style:
-                        TextStyle(fontSize: 14), // הגדרת גודל הטקסט של הפריטים
-                    overflow: TextOverflow.ellipsis, // הוספת אליפסיס לטקסט ארוך
-                  ),
-                ),
-              ],
-              isExpanded: true, // הגדרת התיבה שתתפוס את כל הרוחב הזמין
+  bool isCustomSound = !_alarmSound.startsWith('assets/');
+  String displayValue = isCustomSound ? 'custom' : _alarmSound;
+
+  return Card(
+    elevation: 4,
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+    child: Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('צליל התראה', style: Theme.of(context).textTheme.titleLarge),
+          SizedBox(height: 16),
+          DropdownButtonFormField<String>(
+            decoration: InputDecoration(
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+              contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             ),
-            if (_alarmSound.startsWith('/'))
-              Padding(
-                padding: const EdgeInsets.only(top: 8.0),
-                child: Container(
-                  width: double.infinity,
-                  child: SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
+            value: displayValue,
+            onChanged: (String? newValue) {
+              setState(() {
+                if (newValue == 'custom') {
+                  _pickCustomSound();
+                } else {
+                  _alarmSound = newValue!;
+                }
+              });
+            },
+            items: [
+              ..._availableSounds.map<DropdownMenuItem<String>>((Map<String, String> sound) {
+                return DropdownMenuItem<String>(
+                  value: 'assets/${sound['file']}',
+                  child: Text(
+                    sound['name']!,
+                    style: TextStyle(fontSize: 14),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                );
+              }).toList(),
+              DropdownMenuItem<String>(
+                value: 'custom',
+                child: Text(
+                  isCustomSound ? 'קובץ מותאם אישית' : 'בחר קובץ מותאם אישית',
+                  style: TextStyle(fontSize: 14),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+            isExpanded: true,
+          ),
+          if (isCustomSound)
+            Padding(
+              padding: const EdgeInsets.only(top: 8.0),
+              child: Row(
+                children: [
+                  Expanded(
                     child: Text(
                       'קובץ נבחר: ${_alarmSound.split('/').last}',
-                      style: TextStyle(
-                          fontSize: 12), // גודל טקסט קטן יותר לשם הקובץ
+                      style: TextStyle(fontSize: 12),
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
-                ),
+                  TextButton(
+                    onPressed: _pickCustomSound,
+                    child: Text('שנה קובץ'),
+                  ),
+                ],
               ),
-            SizedBox(height: 16),
-            // Text('עוצמת קול', style: Theme.of(context).textTheme.titleLarge),
-            SwitchListTile(
-              title: Text('השתמש בעוצמת הקול של המערכת'),
-              value: _useSystemVolume,
-              onChanged: (bool value) {
+            ),
+          SizedBox(height: 16),
+          SwitchListTile(
+            title: Text('השתמש בעוצמת הקול של המערכת'),
+            value: _useSystemVolume,
+            onChanged: (bool value) {
+              setState(() {
+                _useSystemVolume = value;
+              });
+            },
+          ),
+          if (!_useSystemVolume)
+            Slider(
+              value: _volume,
+              min: 0.0,
+              max: 1.0,
+              divisions: 10,
+              label: (_volume * 100).round().toString() + '%',
+              onChanged: (double value) {
                 setState(() {
-                  _useSystemVolume = value;
+                  _volume = value;
                 });
               },
             ),
-            if (!_useSystemVolume)
-              Slider(
-                value: _volume,
-                min: 0.0,
-                max: 1.0,
-                divisions: 10,
-                label: (_volume * 100).round().toString() + '%',
-                onChanged: (double value) {
-                  setState(() {
-                    _volume = value;
-                  });
-                },
-              ),
-          ],
-        ),
+        ],
       ),
-    );
+    ),
+  );
+}
+
+Future<void> _pickCustomSound() async {
+  FilePickerResult? result = await FilePicker.platform.pickFiles(
+    type: FileType.audio,
+  );
+
+  if (result != null) {
+    setState(() {
+      _alarmSound = result.files.single.path!;
+    });
   }
+}
 
   Widget _buildAlarmOffMethod() {
     return Card(
@@ -433,27 +445,15 @@ class _EditAlarmScreenState extends State<EditAlarmScreen> {
           DropdownButtonFormField<String>(
             decoration: InputDecoration(
               labelText: 'בחר משחק',
-              labelStyle: TextStyle(fontSize: 14), // הגדרת גודל הטקסט של התווית
-              border:
-                  OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-              contentPadding: EdgeInsets.symmetric(
-                  vertical: 10, horizontal: 10), // הגדרת גודל התיבה
+              labelStyle: TextStyle(fontSize: 14),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+              contentPadding: EdgeInsets.symmetric(vertical: 10, horizontal: 10),
             ),
             value: _selectedGame,
-            isExpanded: true, // הגדרת התיבה שתתפוס את כל הרוחב הזמין
+            isExpanded: true,
             items: const [
-              DropdownMenuItem(
-                value: 'snake',
-                child: Text('נחש',
-                    style:
-                        TextStyle(fontSize: 14)), // הגדרת גודל הטקסט של הפריטים
-              ),
-              DropdownMenuItem(
-                value: 'starwars',
-                child: Text('מלחמת הכוכבים',
-                    style:
-                        TextStyle(fontSize: 14)), // הגדרת גודל הטקסט של הפריטים
-              ),
+              DropdownMenuItem(value: 'snake', child: Text('נחש', style: TextStyle(fontSize: 14))),
+              // DropdownMenuItem(value: 'starwars', child: Text('מלחמת הכוכבים', style: TextStyle(fontSize: 14))),
             ],
             onChanged: (String? value) {
               setState(() {
@@ -465,10 +465,8 @@ class _EditAlarmScreenState extends State<EditAlarmScreen> {
           TextFormField(
             decoration: InputDecoration(
               labelText: 'ניקוד נדרש',
-              border:
-                  OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-              contentPadding: EdgeInsets.symmetric(
-                  vertical: 10, horizontal: 10), // הגדרת גודל התיבה
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+              contentPadding: EdgeInsets.symmetric(vertical: 10, horizontal: 10),
             ),
             keyboardType: TextInputType.number,
             initialValue: _requiredScore.toString(),
@@ -575,19 +573,5 @@ class _EditAlarmScreenState extends State<EditAlarmScreen> {
     return now.add(Duration(days: daysUntilNextWeekday));
   }
 
-  Future<void> _pickCustomSound() async {
-    FilePickerResult? result = await FilePicker.platform.pickFiles(
-      type: FileType.audio,
-    );
-
-    if (result != null) {
-      setState(() {
-        _alarmSound = result.files.single.path!;
-      });
-    } else {
-      setState(() {
-        _alarmSound = 'assets/nokia.mp3';
-      });
-    }
-  }
+  
 }

@@ -70,3 +70,9 @@ flutter {
 dependencies {
     implementation 'androidx.multidex:multidex:2.0.1'
 }
+
+tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).all {
+    kotlinOptions {
+        freeCompilerArgs += ["-Xskip-metadata-version-check"]
+    }
+}
