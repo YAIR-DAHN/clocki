@@ -1,6 +1,6 @@
 name: clocki
-description: The smart clock.
-version: 0.2.1+3
+description: Demonstrates how to use the alarm plugin.
+version: 0.1.2
 
 publish_to: 'none'
 
@@ -8,25 +8,22 @@ environment:
   sdk: '>=3.0.0 <4.0.0'
 
 dependencies:
-  alarm: ^3.1.7
-    # path: C:\Users\user\Documents\PROG\Flutter\clock\alarm
+  alarm:
+    path: ../
   audioplayers: ^6.0.0
-  cupertino_icons: ^1.0.2
+  cupertino_icons: ^1.0.6
   device_info_plus: ^10.1.2
   dynamic_color: ^1.7.0
   file_picker: ^8.0.0+1
   flutter:
     sdk: flutter
-  flutter_localization: ^0.2.2
-  # flutter_time_picker_spinner: ^2.0.0
-  flutter_upgrade_version: ^1.1.6
+  flutter_localization: ^0.2.1
   font_awesome_flutter: ^10.7.0
   google_fonts: ^6.2.1
   lottie: ^3.1.2
   package_info_plus: ^8.0.2
   permission_handler: ^11.1.0
   provider: ^6.1.2
-  time_picker_spinner_pop_up: ^2.0.0
   url_launcher: ^6.3.0
   
 
@@ -47,5 +44,3 @@ flutter:
     - assets/marimba.mp3
     - assets/bell.json
     - assets/space_background.jpg
-
-  generate: true

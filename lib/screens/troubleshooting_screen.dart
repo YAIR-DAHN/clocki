@@ -1,9 +1,11 @@
-import 'package:flutter/services.dart';
-import 'package:flutter/material.dart';
-import 'package:permission_handler/permission_handler.dart';
 import 'package:device_info_plus/device_info_plus.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 class TroubleshootingScreen extends StatefulWidget {
+  const TroubleshootingScreen({super.key});
+
   @override
   _TroubleshootingScreenState createState() => _TroubleshootingScreenState();
 }
@@ -39,28 +41,28 @@ class _TroubleshootingScreenState extends State<TroubleshootingScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('פתרון בעיות'),
+        title: const Text('פתרון בעיות'),
       ),
       body: ListView(
         children: [
           ListTile(
-            title: Text('הרשאת פעולה ברקע'),
-            subtitle: Text('נדרש כדי שהאפליקציה תוכל להפעיל התראות'),
+            title: const Text('הרשאת פעולה ברקע'),
+            subtitle: const Text('נדרש כדי שהאפליקציה תוכל להפעיל התראות'),
             trailing: _isBackgroundPermissionGranted
-                ? Icon(Icons.check_circle, color: Colors.green)
+                ? const Icon(Icons.check_circle, color: Colors.green)
                 : ElevatedButton(
-                    child: Text('אפשר'),
-                    onPressed: () => _requestBackgroundPermission(),
+                    onPressed: _requestBackgroundPermission,
+                    child: const Text('אפשר'),
                   ),
           ),
           ListTile(
-            title: Text('ביטול אופטימיזציית סוללה'),
-            subtitle: Text('נדרש לפעולה אמינה של התראות'),
+            title: const Text('ביטול אופטימיזציית סוללה'),
+            subtitle: const Text('נדרש לפעולה אמינה של התראות'),
             trailing: _isBatteryOptimizationDisabled
-                ? Icon(Icons.check_circle, color: Colors.green)
+                ? const Icon(Icons.check_circle, color: Colors.green)
                 : ElevatedButton(
-                    child: Text('הגדר'),
-                    onPressed: () => _openBatteryOptimizationSettings(),
+                    onPressed: _openBatteryOptimizationSettings,
+                    child: const Text('הגדר'),
                   ),
           ),
         ],
@@ -75,11 +77,11 @@ class _TroubleshootingScreenState extends State<TroubleshootingScreen> {
     });
     if (status.isGranted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('ההרשאה התקבלה בהצלחה')),
+        const SnackBar(content: Text('ההרשאה התקבלה בהצלחה')),
       );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('נא לאשר את ההרשאה בהגדרות המכשיר')),
+        const SnackBar(content: Text('נא לאשר את ההרשאה בהגדרות המכשיר')),
       );
     }
   }
@@ -89,11 +91,11 @@ class _TroubleshootingScreenState extends State<TroubleshootingScreen> {
     final androidInfo = await deviceInfo.androidInfo;
   
     if (androidInfo.version.sdkInt >= 23) {
-      const platform = MethodChannel('com.gdelataillade.alarm.alarm_example/app_settings');
+      const platform = MethodChannel('com.yddApp.clocki/app_settings');
       try {
         await platform.invokeMethod('openBatteryOptimizationSettings');
         // עדכון מצב ההרשאה לאחר שהמשתמש חוזר מההגדרות
-        await Future.delayed(Duration(seconds: 1));
+        await Future.delayed(const Duration(seconds: 1));
         await _checkPermissions();
       } on PlatformException catch (e) {
         print("Failed to open battery optimization settings: '${e.message}'.");
@@ -103,7 +105,7 @@ class _TroubleshootingScreenState extends State<TroubleshootingScreen> {
       }
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('אופטימיזציית סוללה אינה רלוונטית לגרסת המכשיר שלך')),
+        const SnackBar(content: Text('אופטימיזציית סוללה אינה רלוונטית לגרסת המכשיר שלך')),
       );
     }
   }

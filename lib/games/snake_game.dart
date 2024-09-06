@@ -3,10 +3,10 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 
 class SnakeGame extends StatefulWidget {
+
+  const SnakeGame({required this.requiredScore, required this.onGameOver, super.key});
   final int requiredScore;
   final Function onGameOver;
-
-  const SnakeGame({Key? key, required this.requiredScore, required this.onGameOver}) : super(key: key);
 
   @override
   _SnakeGameState createState() => _SnakeGameState();
@@ -16,8 +16,8 @@ class _SnakeGameState extends State<SnakeGame> {
   static List<int> snakePosition = [45, 65, 85, 105, 125];
   int food = 0;
   int score = 0;
-  static var random = Random();
-  static var direction = 'down';
+  static Random random = Random();
+  static String direction = 'down';
   bool isPlaying = false;
   bool gameStarted = false;
   bool gameFinished = false;
@@ -65,28 +65,24 @@ class _SnakeGameState extends State<SnakeGame> {
           } else {
             snakePosition.add(snakePosition.last + 20);
           }
-          break;
         case 'up':
           if (snakePosition.last < 20) {
             snakePosition.add(snakePosition.last - 20 + 400);
           } else {
             snakePosition.add(snakePosition.last - 20);
           }
-          break;
         case 'right':
           if (snakePosition.last % 20 == 0) {
             snakePosition.add(snakePosition.last + 19);
           } else {
             snakePosition.add(snakePosition.last - 1);
           }
-          break;
         case 'left':
           if ((snakePosition.last + 1) % 20 == 0) {
             snakePosition.add(snakePosition.last - 19);
           } else {
             snakePosition.add(snakePosition.last + 1);
           }
-          break;
       }
 
       if (snakePosition.last == food) {
@@ -102,7 +98,7 @@ class _SnakeGameState extends State<SnakeGame> {
   }
 
   bool gameOver() {
-    for (int i = 0; i < snakePosition.length - 1; i++) {
+    for (var i = 0; i < snakePosition.length - 1; i++) {
       if (snakePosition.last == snakePosition[i]) {
         return true;
       }
@@ -115,16 +111,16 @@ class _SnakeGameState extends State<SnakeGame> {
       isPlaying = false;
       gameFinished = true;
       if (success) {
-        showDialog(
+        showDialog<void>(
           context: context,
           barrierDismissible: false,
           builder: (BuildContext context) {
             return AlertDialog(
-              title: Text('כל הכבוד!'),
-              content: Text('סיימת בהצלחה,כעת ניתן לכבות את ההתראה'),
+              title: const Text('כל הכבוד!'),
+              content: const Text('סיימת בהצלחה,כעת ניתן לכבות את ההתראה'),
               actions: <Widget>[
                 TextButton(
-                  child: Text('כיבוי'),
+                  child: const Text('כיבוי'),
                   onPressed: () {
                     Navigator.of(context).pop();
                     widget.onGameOver(score);
@@ -155,18 +151,18 @@ class _SnakeGameState extends State<SnakeGame> {
         children: <Widget>[
           if (!gameStarted)
             ElevatedButton(
-              child: Text(
-                'התחל משחק',
-                style: TextStyle(fontSize: 24),
-              ),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.green,
-                padding: EdgeInsets.symmetric(horizontal: 50, vertical: 20),
+                padding: const EdgeInsets.symmetric(horizontal: 50, vertical: 20),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(30),
                 ),
               ),
               onPressed: startGame,
+              child: const Text(
+                'התחל משחק',
+                style: TextStyle(fontSize: 24),
+              ),
             )
           else
             Container(
@@ -180,7 +176,7 @@ class _SnakeGameState extends State<SnakeGame> {
                     color: Colors.black.withOpacity(0.2),
                     spreadRadius: 5,
                     blurRadius: 7,
-                    offset: Offset(0, 3),
+                    offset: const Offset(0, 3),
                   ),
                 ],
               ),
@@ -202,16 +198,16 @@ class _SnakeGameState extends State<SnakeGame> {
                     }
                   },
                   child: GridView.builder(
-                    physics: NeverScrollableScrollPhysics(),
+                    physics: const NeverScrollableScrollPhysics(),
                     itemCount: 400,
-                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                       crossAxisCount: 20,
                     ),
                     itemBuilder: (BuildContext context, int index) {
                       if (snakePosition.contains(index)) {
                         return Center(
                           child: Container(
-                            padding: EdgeInsets.all(2),
+                            padding: const EdgeInsets.all(2),
                             child: ClipRRect(
                               borderRadius: BorderRadius.circular(5),
                               child: Container(
@@ -223,11 +219,11 @@ class _SnakeGameState extends State<SnakeGame> {
                       }
                       if (index == food) {
                         return Container(
-                          padding: EdgeInsets.all(2),
+                          padding: const EdgeInsets.all(2),
                           child: ClipRRect(
                             borderRadius: BorderRadius.circular(5),
                             child: Container(
-                              decoration: BoxDecoration(
+                              decoration: const BoxDecoration(
                                 color: Colors.red,
                                 shape: BoxShape.circle,
                               ),
@@ -236,7 +232,7 @@ class _SnakeGameState extends State<SnakeGame> {
                         );
                       } else {
                         return Container(
-                          padding: EdgeInsets.all(2),
+                          padding: const EdgeInsets.all(2),
                           child: ClipRRect(
                             borderRadius: BorderRadius.circular(5),
                             child: Container(color: Colors.transparent),
@@ -248,10 +244,10 @@ class _SnakeGameState extends State<SnakeGame> {
                 ),
               ),
             ),
-          SizedBox(height: 20),
+          const SizedBox(height: 20),
           Text(
             'ניקוד: $score / ${widget.requiredScore}',
-            style: TextStyle(fontSize: 24, color: Colors.white, fontWeight: FontWeight.bold),
+            style: const TextStyle(fontSize: 24, color: Colors.white, fontWeight: FontWeight.bold),
           ),
         ],
       ),

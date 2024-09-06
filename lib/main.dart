@@ -1,13 +1,15 @@
 import 'dart:async';
 
 import 'package:alarm/alarm.dart';
+import 'package:clocki/screens/home.dart';
 import 'package:dynamic_color/dynamic_color.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:google_fonts/google_fonts.dart';
-
-import 'screens/home.dart';
+import 'package:flutter_upgrade_version/flutter_upgrade_version.dart';
+import 'dart:io' show Platform;
+import 'package:url_launcher/url_launcher.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -25,12 +27,11 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return DynamicColorBuilder(
       builder: (ColorScheme? lightDynamic, ColorScheme? darkDynamic) {
-        ColorScheme lightColorScheme = lightDynamic ?? ColorScheme.fromSeed(
+        final lightColorScheme = lightDynamic ?? ColorScheme.fromSeed(
           seedColor: Colors.deepPurple,
-          brightness: Brightness.light,
         );
 
-        ColorScheme darkColorScheme = darkDynamic ?? ColorScheme.fromSeed(
+        final darkColorScheme = darkDynamic ?? ColorScheme.fromSeed(
           seedColor: Colors.deepPurple,
           brightness: Brightness.dark,
         );
@@ -46,8 +47,8 @@ class MyApp extends StatelessWidget {
               bodyLarge: GoogleFonts.heebo(fontSize: 16),
               bodyMedium: GoogleFonts.heebo(fontSize: 14),
             ).apply(
-              bodyColor: lightColorScheme.onBackground,
-              displayColor: lightColorScheme.onBackground,
+              bodyColor: lightColorScheme.onSurface,
+              displayColor: lightColorScheme.onSurface,
             ),
             appBarTheme: AppBarTheme(
               backgroundColor: lightColorScheme.primaryContainer,
@@ -58,7 +59,7 @@ class MyApp extends StatelessWidget {
               style: ElevatedButton.styleFrom(
                 foregroundColor: lightColorScheme.onPrimary,
                 backgroundColor: lightColorScheme.primary,
-                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(8),
                 ),
@@ -78,8 +79,8 @@ class MyApp extends StatelessWidget {
               bodyLarge: GoogleFonts.heebo(fontSize: 16),
               bodyMedium: GoogleFonts.heebo(fontSize: 14),
             ).apply(
-              bodyColor: darkColorScheme.onBackground,
-              displayColor: darkColorScheme.onBackground,
+              bodyColor: darkColorScheme.onSurface,
+              displayColor: darkColorScheme.onSurface,
             ),
             appBarTheme: AppBarTheme(
               backgroundColor: darkColorScheme.primaryContainer,
@@ -90,7 +91,7 @@ class MyApp extends StatelessWidget {
               style: ElevatedButton.styleFrom(
                 foregroundColor: darkColorScheme.onPrimary,
                 backgroundColor: darkColorScheme.primary,
-                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(8),
                 ),
@@ -101,7 +102,7 @@ class MyApp extends StatelessWidget {
               foregroundColor: darkColorScheme.onPrimaryContainer,
             ),
           ),
-          home: HomeScreen(),
+          home: const UpdateWrapper(child: HomeScreen()),
           localizationsDelegates: const [
             GlobalMaterialLocalizations.delegate,
             GlobalWidgetsLocalizations.delegate,
@@ -114,5 +115,88 @@ class MyApp extends StatelessWidget {
         );
       },
     );
+  }
+}
+
+class UpdateWrapper extends StatefulWidget {
+  final Widget child;
+
+  const UpdateWrapper({Key? key, required this.child}) : super(key: key);
+
+  @override
+  _UpdateWrapperState createState() => _UpdateWrapperState();
+}
+
+class _UpdateWrapperState extends State<UpdateWrapper> {
+  @override
+  void initState() {
+    super.initState();
+    _checkForUpdate();
+  }
+
+  Future<void> _checkForUpdate() async {
+    PackageInfo packageInfo = await PackageManager.getPackageInfo();
+
+    if (Platform.isAndroid) {
+      InAppUpdateManager manager = InAppUpdateManager();
+      AppUpdateInfo? appUpdateInfo = await manager.checkForUpdate();
+      if (appUpdateInfo != null &&
+          appUpdateInfo.updateAvailability == UpdateAvailability.updateAvailable) {
+        if (appUpdateInfo.immediateAllowed) {
+          await manager.startAnUpdate(type: AppUpdateType.immediate);
+        } else if (appUpdateInfo.flexibleAllowed) {
+          await manager.startAnUpdate(type: AppUpdateType.flexible);
+        }
+      }
+    } else if (Platform.isIOS) {
+      VersionInfo? versionInfo = await UpgradeVersion.getiOSStoreVersion(
+        packageInfo: packageInfo,
+        regionCode: 'IL', // קוד המדינה של ישראל
+      );
+
+      if (versionInfo != null && versionInfo.canUpdate) {
+        _showUpdateDialog(versionInfo);
+      }
+    }
+  }
+
+  void _showUpdateDialog(VersionInfo versionInfo) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('עדכון זמין'),
+          content: Text('גרסה חדשה (${versionInfo.storeVersion}) זמינה. האם ברצונך לעדכן?'),
+          actions: <Widget>[
+            TextButton(
+              child: const Text('לא עכשיו'),
+              onPressed: () => Navigator.of(context).pop(),
+            ),
+            TextButton(
+              child: const Text('עדכן'),
+              onPressed: () {
+                Navigator.of(context).pop();
+                _launchAppStore(versionInfo.appStoreLink);
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _launchAppStore(String url) async {
+    final Uri uri = Uri.parse(url);
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } else {
+      print('לא ניתן לפתוח את ה-URL: $url');
+      // כאן תוכל להוסיף הודעת שגיאה למשתמש אם רצונך
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return widget.child;
   }
 }

@@ -1,10 +1,12 @@
-import 'package:flutter/material.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'package:device_info_plus/device_info_plus.dart';
-import 'package:package_info_plus/package_info_plus.dart';
+import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:package_info_plus/package_info_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class ContactUsScreen extends StatefulWidget {
+  const ContactUsScreen({super.key});
+
   @override
   _ContactUsScreenState createState() => _ContactUsScreenState();
 }
@@ -34,15 +36,15 @@ class _ContactUsScreenState extends State<ContactUsScreen> {
     setState(() => _isLoading = true);
 
     try {
-      DeviceInfoPlugin deviceInfo = DeviceInfoPlugin();
-      PackageInfo packageInfo = await PackageInfo.fromPlatform();
+      final deviceInfo = DeviceInfoPlugin();
+      final packageInfo = await PackageInfo.fromPlatform();
 
       if (Theme.of(context).platform == TargetPlatform.android) {
-        AndroidDeviceInfo androidInfo = await deviceInfo.androidInfo;
+        final androidInfo = await deviceInfo.androidInfo;
         _deviceInfo =
             'דגם: ${androidInfo.model}, גרסת אנדרואיד: ${androidInfo.version.release}';
       } else if (Theme.of(context).platform == TargetPlatform.iOS) {
-        IosDeviceInfo iosInfo = await deviceInfo.iosInfo;
+        final iosInfo = await deviceInfo.iosInfo;
         _deviceInfo =
             'דגם: ${iosInfo.model}, גרסת iOS: ${iosInfo.systemVersion}';
       }
@@ -58,7 +60,7 @@ class _ContactUsScreenState extends State<ContactUsScreen> {
   String? _encodeQueryParameters(Map<String, String> params) {
     return params.entries
         .map((e) =>
-            '${Uri.encodeComponent(e.key)}=${Uri.encodeComponent(e.value)}')
+            '${Uri.encodeComponent(e.key)}=${Uri.encodeComponent(e.value)}',)
         .join('&');
   }
 
@@ -67,7 +69,7 @@ class _ContactUsScreenState extends State<ContactUsScreen> {
 
     _formKey.currentState!.save();
 
-    final Uri emailLaunchUri = Uri(
+    final emailLaunchUri = Uri(
       scheme: 'mailto',
       path: 'yairdahn@gmail.com',
       query: _encodeQueryParameters(<String, String>{
@@ -85,9 +87,9 @@ class _ContactUsScreenState extends State<ContactUsScreen> {
 
     _formKey.currentState!.save();
 
-    final phoneNumber = '972583730000';
+    const phoneNumber = '972583730000';
     final message = Uri.encodeComponent(
-        '*אפליקציית קלוקי - יצירת קשר: $_selectedTopic*\n\nתוכן הפנייה: $_content\n\nשם: $_name\nטלפון: $_phone\n\nמידע על המכשיר: $_deviceInfo');
+        '*אפליקציית קלוקי - יצירת קשר: $_selectedTopic*\n\nתוכן הפנייה: $_content\n\nשם: $_name\nטלפון: $_phone\n\nמידע על המכשיר: $_deviceInfo',);
 
     final whatsappUrl = 'https://wa.me/$phoneNumber?text=$message';
 
@@ -110,13 +112,13 @@ class _ContactUsScreenState extends State<ContactUsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('צור קשר'),
+        title: const Text('צור קשר'),
         centerTitle: true,
       ),
       body: _isLoading
-          ? Center(child: CircularProgressIndicator())
+          ? const Center(child: CircularProgressIndicator())
           : SingleChildScrollView(
-              padding: EdgeInsets.all(16.0),
+              padding: const EdgeInsets.all(16),
               child: Form(
                 key: _formKey,
                 child: Column(
@@ -126,9 +128,9 @@ class _ContactUsScreenState extends State<ContactUsScreen> {
                       'רוצה להגיד משהו? יש לך הערות / הארות? רעיונות נוספים לשיפור? נשמח שתכתוב לנו!',
                       style: Theme.of(context).textTheme.titleLarge,
                     ),
-                    SizedBox(height: 16),
+                    const SizedBox(height: 16),
                     DropdownButtonFormField<String>(
-                      decoration: InputDecoration(
+                      decoration: const InputDecoration(
                         labelText: 'נושא הפנייה',
                         border: OutlineInputBorder(),
                       ),
@@ -148,9 +150,9 @@ class _ContactUsScreenState extends State<ContactUsScreen> {
                         );
                       }).toList(),
                     ),
-                    SizedBox(height: 16),
+                    const SizedBox(height: 16),
                     TextFormField(
-                      decoration: InputDecoration(
+                      decoration: const InputDecoration(
                         labelText: 'תוכן הפנייה',
                         border: OutlineInputBorder(),
                       ),
@@ -159,50 +161,50 @@ class _ContactUsScreenState extends State<ContactUsScreen> {
                           value!.isEmpty ? 'אנא הכנס את תוכן הפנייה' : null,
                       onSaved: (value) => _content = value!,
                     ),
-                    SizedBox(height: 16),
+                    const SizedBox(height: 16),
                     TextFormField(
-                      decoration: InputDecoration(
+                      decoration: const InputDecoration(
                         labelText: 'שם (אופציונלי)',
                         border: OutlineInputBorder(),
                       ),
                       onSaved: (value) => _name = value ?? '',
                     ),
-                    SizedBox(height: 16),
+                    const SizedBox(height: 16),
                     TextFormField(
-                      decoration: InputDecoration(
+                      decoration: const InputDecoration(
                         labelText: 'טלפון (אופציונלי)',
                         border: OutlineInputBorder(),
                       ),
                       keyboardType: TextInputType.phone,
                       onSaved: (value) => _phone = value ?? '',
                     ),
-                    SizedBox(height: 24),
+                    const SizedBox(height: 24),
                     Text(
                       'מידע על המכשיר: $_deviceInfo',
                       style: Theme.of(context).textTheme.bodyMedium,
                     ),
-                    SizedBox(height: 24),
+                    const SizedBox(height: 24),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                       children: [
                         ElevatedButton.icon(
-                            icon: Icon(Icons.email),
-                            label: Text('שלח במייל'),
+                            icon: const Icon(Icons.email),
+                            label: const Text('שלח במייל'),
                             onPressed: _sendEmail,
                             style: ElevatedButton.styleFrom(
                               foregroundColor: Colors.white,
-                              padding: EdgeInsets.symmetric(
-                                  horizontal: 16, vertical: 12),
-                            )),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 16, vertical: 12,),
+                            ),),
                         ElevatedButton.icon(
-                            icon: Icon(FontAwesomeIcons.whatsapp),
-                            label: Text('שלח בוואטסאפ'),
+                            icon: const Icon(FontAwesomeIcons.whatsapp),
+                            label: const Text('שלח בוואטסאפ'),
                             onPressed: _sendWhatsApp,
                             style: ElevatedButton.styleFrom(
                               foregroundColor: Colors.white,
-                              padding: EdgeInsets.symmetric(
-                                  horizontal: 16, vertical: 12),
-                            )),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 16, vertical: 12,),
+                            ),),
                       ],
                     ),
                   ],

@@ -1,0 +1,9 @@
+{
+  "appTitle": "קלוקי - שעון מעורר",
+  "alarmScreenTitle": "התראות",
+  "addAlarmButton": "הוסף התראה",
+  "settingsButton": "הגדרות",
+  "@appTitle": {
+    "description": "שם האפליקציה"
+  }
+}

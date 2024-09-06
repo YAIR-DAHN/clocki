@@ -1,10 +1,12 @@
-import 'package:flutter/material.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'package:device_info_plus/device_info_plus.dart';
-import 'package:package_info_plus/package_info_plus.dart';
+import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:package_info_plus/package_info_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class ContactUsScreen extends StatefulWidget {
+  const ContactUsScreen({super.key});
+
   @override
   _ContactUsScreenState createState() => _ContactUsScreenState();
 }
@@ -35,14 +37,14 @@ class _ContactUsScreenState extends State<ContactUsScreen> {
     setState(() => _isLoading = true);
 
     try {
-      DeviceInfoPlugin deviceInfo = DeviceInfoPlugin();
-      PackageInfo packageInfo = await PackageInfo.fromPlatform();
+      final deviceInfo = DeviceInfoPlugin();
+      final packageInfo = await PackageInfo.fromPlatform();
 
       if (Theme.of(context).platform == TargetPlatform.android) {
-        AndroidDeviceInfo androidInfo = await deviceInfo.androidInfo;
+        final androidInfo = await deviceInfo.androidInfo;
         _deviceInfo = 'דגם: ${androidInfo.model}, גרסת אנדרואיד: ${androidInfo.version.release}';
       } else if (Theme.of(context).platform == TargetPlatform.iOS) {
-        IosDeviceInfo iosInfo = await deviceInfo.iosInfo;
+        final iosInfo = await deviceInfo.iosInfo;
         _deviceInfo = 'דגם: ${iosInfo.model}, גרסת iOS: ${iosInfo.systemVersion}';
       }
 
@@ -65,7 +67,7 @@ class _ContactUsScreenState extends State<ContactUsScreen> {
 
     _formKey.currentState!.save();
 
-    final Uri emailLaunchUri = Uri(
+    final emailLaunchUri = Uri(
       scheme: 'mailto',
       path: 'yairdahn@gmail.com',
       query: _encodeQueryParameters(<String, String>{
@@ -82,9 +84,9 @@ class _ContactUsScreenState extends State<ContactUsScreen> {
 
     _formKey.currentState!.save();
 
-    final phoneNumber = '972583730000';
+    const phoneNumber = '972583730000';
     final message = Uri.encodeComponent(
-        '*אפליקציית קלוקי - יצירת קשר: $_selectedTopic*\n\nתוכן הפנייה: $_content\n\nשם: $_name\nטלפון: $_phone\n\nמידע על המכשיר: $_deviceInfo');
+        '*אפליקציית קלוקי - יצירת קשר: $_selectedTopic*\n\nתוכן הפנייה: $_content\n\nשם: $_name\nטלפון: $_phone\n\nמידע על המכשיר: $_deviceInfo',);
 
     final whatsappUrl = 'https://wa.me/$phoneNumber?text=$message';
 
@@ -107,14 +109,14 @@ class _ContactUsScreenState extends State<ContactUsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('צור קשר'),
+        title: const Text('צור קשר'),
         centerTitle: true,
       ),
       body: _isLoading
-          ? Center(child: CircularProgressIndicator())
+          ? const Center(child: CircularProgressIndicator())
           : SafeArea(
               child: SingleChildScrollView(
-                padding: EdgeInsets.all(16.0),
+                padding: const EdgeInsets.all(16),
                 child: Form(
                   key: _formKey,
                   child: Column(
@@ -123,7 +125,7 @@ class _ContactUsScreenState extends State<ContactUsScreen> {
                       Card(
                         elevation: 4,
                         child: Padding(
-                          padding: EdgeInsets.all(16),
+                          padding: const EdgeInsets.all(16),
                           child: Text(
                             'נשמח שתכתוב לנו!',
                             style: Theme.of(context).textTheme.titleLarge?.copyWith(color: Colors.blue[800]),
@@ -131,7 +133,7 @@ class _ContactUsScreenState extends State<ContactUsScreen> {
                           ),
                         ),
                       ),
-                      SizedBox(height: 16),
+                      const SizedBox(height: 16),
                       DropdownButtonFormField<String>(
                         decoration: InputDecoration(
                           labelText: 'נושא הפנייה',
@@ -154,7 +156,7 @@ class _ContactUsScreenState extends State<ContactUsScreen> {
                         }).toList(),
                         isExpanded: true,
                       ),
-                      SizedBox(height: 16),
+                      const SizedBox(height: 16),
                       TextFormField(
                         decoration: InputDecoration(
                           labelText: 'תוכן הפנייה',
@@ -166,7 +168,7 @@ class _ContactUsScreenState extends State<ContactUsScreen> {
                         validator: (value) => value!.isEmpty ? 'אנא הכנס את תוכן הפנייה' : null,
                         onSaved: (value) => _content = value!,
                       ),
-                      SizedBox(height: 16),
+                      const SizedBox(height: 16),
                       TextFormField(
                         decoration: InputDecoration(
                           labelText: 'שם (אופציונלי)',
@@ -176,7 +178,7 @@ class _ContactUsScreenState extends State<ContactUsScreen> {
                         ),
                         onSaved: (value) => _name = value ?? '',
                       ),
-                      SizedBox(height: 16),
+                      const SizedBox(height: 16),
                       TextFormField(
                         decoration: InputDecoration(
                           labelText: 'טלפון (אופציונלי)',
@@ -187,43 +189,43 @@ class _ContactUsScreenState extends State<ContactUsScreen> {
                         keyboardType: TextInputType.phone,
                         onSaved: (value) => _phone = value ?? '',
                       ),
-                      SizedBox(height: 16),
+                      const SizedBox(height: 16),
                       Card(
                         elevation: 2,
                         child: Padding(
-                          padding: EdgeInsets.all(8),
+                          padding: const EdgeInsets.all(8),
                           child: Text(
                             'מידע על המכשיר: $_deviceInfo',
                             style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey[600]),
                           ),
                         ),
                       ),
-                      SizedBox(height: 24),
+                      const SizedBox(height: 24),
                       Row(
                         children: [
                           Expanded(
                             child: ElevatedButton.icon(
-                              icon: Icon(Icons.email, size: 18),
-                              label: Text('שלח במייל', style: TextStyle(fontSize: 14)),
+                              icon: const Icon(Icons.email, size: 18),
+                              label: const Text('שלח במייל', style: TextStyle(fontSize: 14)),
                               onPressed: _sendEmail,
                               style: ElevatedButton.styleFrom(
                                 foregroundColor: Colors.white,
                                 backgroundColor: Colors.blue,
-                                padding: EdgeInsets.symmetric(vertical: 12),
+                                padding: const EdgeInsets.symmetric(vertical: 12),
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                               ),
                             ),
                           ),
-                          SizedBox(width: 8),
+                          const SizedBox(width: 8),
                           Expanded(
                             child: ElevatedButton.icon(
-                              icon: Icon(FontAwesomeIcons.whatsapp, size: 18),
-                              label: Text('שלח בוואטסאפ', style: TextStyle(fontSize: 14)),
+                              icon: const Icon(FontAwesomeIcons.whatsapp, size: 18),
+                              label: const Text('שלח בוואטסאפ', style: TextStyle(fontSize: 14)),
                               onPressed: _sendWhatsApp,
                               style: ElevatedButton.styleFrom(
                                 foregroundColor: Colors.white,
                                 backgroundColor: Colors.green,
-                                padding: EdgeInsets.symmetric(vertical: 12),
+                                padding: const EdgeInsets.symmetric(vertical: 12),
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                               ),
                             ),

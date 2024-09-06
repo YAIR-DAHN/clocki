@@ -1,15 +1,15 @@
-import 'package:flutter/material.dart';
 import 'package:alarm/alarm.dart';
-import 'package:flutter/services.dart';
+import 'package:clocki/games/snake_game.dart';
+import 'package:clocki/games/star_wars_game.dart';
 import 'package:audioplayers/audioplayers.dart';
-import '../games/snake_game.dart';
-import '../games/star_wars_game.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:lottie/lottie.dart';
 
 class RingScreen extends StatefulWidget {
-  final AlarmSettings alarmSettings;
 
-  const RingScreen({Key? key, required this.alarmSettings}) : super(key: key);
+  const RingScreen({required this.alarmSettings, super.key});
+  final AlarmSettings alarmSettings;
 
   @override
   _RingScreenState createState() => _RingScreenState();
@@ -22,9 +22,10 @@ class _RingScreenState extends State<RingScreen> {
   late int _requiredScore;
   late AudioPlayer _audioPlayer;
   late String _alarmName;
+  late String _textToType; // נוסיף משתנה חדש לטקסט שצריך להקליד
 
   String _enteredText = '';
-  int _gameScore = 0;
+  final int _gameScore = 0;
 
  @override
   void initState() {
@@ -35,21 +36,34 @@ class _RingScreenState extends State<RingScreen> {
 
   void _parseAlarmSettings() {
     final parts = widget.alarmSettings.notificationBody.split('|');
-    if (parts.length >= 4) {
-      _alarmOffMethod = parts[0].split(' ').last;
-      _alarmName = parts[1];
-      _customText = parts[1];
+    _alarmOffMethod = parts[0].split(' ').last;
+    _alarmName = widget.alarmSettings.notificationTitle; // שם ההתראה
+    
+    if (_alarmOffMethod == 'text' && parts.length > 1) {
+      _textToType = parts[1]; // הטקסט לכיבוי
+    } else {
+      _textToType = '';
+    }
+    
+    if (parts.length > 2) {
       _selectedGame = parts[2];
+    } else {
+      _selectedGame = 'snake';
+    }
+    
+    if (parts.length > 3) {
       _requiredScore = int.tryParse(parts[3]) ?? 5;
     } else {
-      _alarmOffMethod = 'standard';
-      _alarmName = '';
-      _customText = '';
-      _selectedGame = 'snake';
       _requiredScore = 5;
     }
-    print("Parsed alarm off method: $_alarmOffMethod");
-    print("Parsed selected game: $_selectedGame");
+
+    print('Parsed alarm settings:');
+    print('Alarm off method: $_alarmOffMethod');
+    print('Alarm name: $_alarmName');
+    print('Text to type: $_textToType');
+    print('Selected game: $_selectedGame');
+    print('Required score: $_requiredScore');
+    print('Full notification body: ${widget.alarmSettings.notificationBody}');
   }
 
   Future<void> _playAlarmSound() async {
@@ -57,7 +71,7 @@ class _RingScreenState extends State<RingScreen> {
     try {
       await _audioPlayer.play(AssetSource(widget.alarmSettings.assetAudioPath));
     } catch (e) {
-      print("Error playing alarm sound: $e");
+      print('Error playing alarm sound: $e');
     }
   }
 
@@ -69,8 +83,8 @@ class _RingScreenState extends State<RingScreen> {
 
   @override
   Widget build(BuildContext context) {
-    print("Selected game: $_selectedGame");
-    print("Alarm off method: $_alarmOffMethod");
+    print('Selected game: $_selectedGame');
+    print('Alarm off method: $_alarmOffMethod');
     return Scaffold(
       body: Container(
         decoration: BoxDecoration(
@@ -110,7 +124,7 @@ class _RingScreenState extends State<RingScreen> {
   }
 
   Widget _buildAlarmOffMethod() {
-    print("Building alarm off method: $_alarmOffMethod");
+    print('Building alarm off method: $_alarmOffMethod');
     switch (_alarmOffMethod) {
       case 'text':
         return _buildTextChallenge();
@@ -123,20 +137,25 @@ class _RingScreenState extends State<RingScreen> {
 
   Widget _buildTextChallenge() {
     return Container(
-      padding: EdgeInsets.all(16),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white.withOpacity(0.8),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
         children: [
+          Text(
+            _alarmName, // הצג את שם ההתראה
+            style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 16),
           const Text(
             'הקלד את הטקסט הבא:',
             style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 8),
           Text(
-            _customText,
+            _textToType, // השתמש בטקסט שצריך להקליד
             style: TextStyle(fontSize: 20, color: Colors.blue.shade800),
           ),
           const SizedBox(height: 16),
@@ -156,12 +175,12 @@ class _RingScreenState extends State<RingScreen> {
           ),
           const SizedBox(height: 16),
           ElevatedButton(
-            child: Text('כבה התראה'),
-            onPressed: _enteredText == _customText ? _stopAlarm : null,
+            onPressed: _enteredText == _textToType ? _stopAlarm : null,
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.blue.shade800,
-              padding: EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
             ),
+            child: const Text('כבה התראה'),
           ),
         ],
       ),
@@ -169,7 +188,7 @@ class _RingScreenState extends State<RingScreen> {
   }
 
  Widget _buildGameChallenge() {
-  print("Building game challenge for: $_selectedGame");
+  print('Building game challenge for: $_selectedGame');
   if (_selectedGame == 'snake') {
     return Container(
       width: MediaQuery.of(context).size.width,
@@ -202,7 +221,7 @@ class _RingScreenState extends State<RingScreen> {
 }
 
   void _handleGameOver(int score) {
-    print("Game over with score: $score");
+    // print('Game over with score: $score');
     if (score >= _requiredScore) {
       _stopAlarm();
     } else {
@@ -216,54 +235,54 @@ class _RingScreenState extends State<RingScreen> {
       children: [
         ElevatedButton(
           onPressed: _snoozeAlarm,
-          child: Text('נודניק'),
           style: ElevatedButton.styleFrom(
             backgroundColor: Colors.orange,
             padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
           ),
+          child: const Text('נודניק'),
         ),
         ElevatedButton(
           onPressed: _stopAlarm,
-          child: Text('כבה'),
           style: ElevatedButton.styleFrom(
             backgroundColor: Colors.red,
-            padding: EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
           ),
+          child: const Text('כבה'),
         ),
       ],
     );
   }
 
   Future<void> _stopAlarm() async {
-    print("Attempting to stop alarm with id: ${widget.alarmSettings.id}");
+    // print('Attempting to stop alarm with id: ${widget.alarmSettings.id}');
     try {
       await _audioPlayer.stop();
-      bool stopped = await Alarm.stop(widget.alarmSettings.id);
-      print("Alarm stop result: $stopped");
+      final stopped = await Alarm.stop(widget.alarmSettings.id);
+      // print('Alarm stop result: $stopped');
       if (stopped) {
-        print("Alarm stopped successfully");
+        // print('Alarm stopped successfully');
 
         // Stop vibration
         await SystemChannels.platform
             .invokeMethod<void>('HapticFeedback.vibrate');
-        await Future.delayed(Duration(milliseconds: 500));
+        await Future.delayed(const Duration(milliseconds: 500));
         await SystemChannels.platform
             .invokeMethod<void>('HapticFeedback.cancel');
 
-        print("Vibration stopped, popping screen");
+        // print('Vibration stopped, popping screen');
         if (mounted) {
           Navigator.of(context).pop(true);
         } else {
-          print("Widget is not mounted, cannot pop screen");
+          print('Widget is not mounted, cannot pop screen');
         }
       } else {
-        print("Failed to stop alarm");
+        print('Failed to stop alarm');
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('שגיאה בכיבוי ההתראה')),
+          const SnackBar(content: Text('שגיאה בכיבוי ההתראה')),
         );
       }
     } catch (e) {
-      print("Error stopping alarm: $e");
+      print('Error stopping alarm: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('שגיאה בכיבוי ההתראה: $e')),
       );
@@ -271,11 +290,11 @@ class _RingScreenState extends State<RingScreen> {
   }
 
   Future<void> _snoozeAlarm() async {
-    print("Attempting to snooze alarm with id: ${widget.alarmSettings.id}");
+    print('Attempting to snooze alarm with id: ${widget.alarmSettings.id}');
     final now = DateTime.now();
     try {
       await _audioPlayer.stop();
-      bool set = await Alarm.set(
+      final set = await Alarm.set(
         alarmSettings: widget.alarmSettings.copyWith(
           dateTime: DateTime(
             now.year,
@@ -286,22 +305,22 @@ class _RingScreenState extends State<RingScreen> {
           ).add(const Duration(minutes: 5)),
         ),
       );
-      print("Alarm snooze result: $set");
+      print('Alarm snooze result: $set');
       if (set) {
-        print("Alarm snoozed successfully, popping screen");
+        print('Alarm snoozed successfully, popping screen');
         if (mounted) {
           Navigator.of(context).pop(true);
         } else {
-          print("Widget is not mounted, cannot pop screen");
+          print('Widget is not mounted, cannot pop screen');
         }
       } else {
-        print("Failed to snooze alarm");
+        print('Failed to snooze alarm');
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('שגיאה בדחיית ההתראה')),
+          const SnackBar(content: Text('שגיאה בדחיית ההתראה')),
         );
       }
     } catch (e) {
-      print("Error snoozing alarm: $e");
+      print('Error snoozing alarm: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('שגיאה בדחיית ההתראה: $e')),
       );
@@ -313,12 +332,12 @@ class _RingScreenState extends State<RingScreen> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: Text('כמעט הצלחת!'),
+          title: const Text('כמעט הצלחת!'),
           content:
               Text('השגת $score נקודות מתוך $_requiredScore הנדרשות. נסה שוב!'),
           actions: <Widget>[
             TextButton(
-              child: Text('נסה שוב'),
+              child: const Text('נסה שוב'),
               onPressed: () {
                 Navigator.of(context).pop();
                 setState(() {});

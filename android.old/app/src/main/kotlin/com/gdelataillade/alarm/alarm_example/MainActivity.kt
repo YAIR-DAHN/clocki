@@ -1,4 +1,4 @@
-package com.yddApp.clocki
+package com.gdelataillade.alarm.alarm_example
 
 import android.content.Intent
 import android.os.Build

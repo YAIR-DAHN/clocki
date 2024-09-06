@@ -1,22 +1,25 @@
-import 'package:flutter/material.dart';
 import 'package:alarm/alarm.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart';
+import 'package:time_picker_spinner_pop_up/time_picker_spinner_pop_up.dart';
 
 class EditAlarmScreen extends StatefulWidget {
+
+  const EditAlarmScreen({super.key, this.alarmSettings});
   final AlarmSettings? alarmSettings;
 
-  const EditAlarmScreen({Key? key, this.alarmSettings}) : super(key: key);
-
   @override
-  _EditAlarmScreenState createState() => _EditAlarmScreenState();
+  EditAlarmScreenState createState() => EditAlarmScreenState();
 }
 
-class _EditAlarmScreenState extends State<EditAlarmScreen> {
+class EditAlarmScreenState extends State<EditAlarmScreen> {
   late DateTime _alarmTime;
   late bool _isRepeating;
   late String _alarmSound;
   late String _alarmOffMethod;
-  late String _customText;
+  late String _alarmName;
+  late String _textToType;
   late String _selectedGame;
   late int _requiredScore;
   late double _volume;
@@ -26,11 +29,11 @@ class _EditAlarmScreenState extends State<EditAlarmScreen> {
   final List<bool> _selectedDays = List.filled(7, false);
 
   final List<Map<String, String>> _availableSounds = [
-    {"name": "נוקיה", "file": "nokia.mp3"},
-    {"name": "אייפון", "file": "marimba.mp3"},
-    {"name": "מוצרט", "file": "mozart.mp3"},
-    {"name": "מצחיק", "file": "one_piece.mp3"},
-    {"name": "תקיעה", "file": "star_wars.mp3"},
+    {'name': 'נוקיה', 'file': 'nokia.mp3'},
+    {'name': 'אייפון', 'file': 'marimba.mp3'},
+    {'name': 'מוצרט', 'file': 'mozart.mp3'},
+    {'name': 'מצחיק', 'file': 'one_piece.mp3'},
+    {'name': 'תקיעה', 'file': 'star_wars.mp3'},
   ];
 
   @override
@@ -45,7 +48,8 @@ class _EditAlarmScreenState extends State<EditAlarmScreen> {
       _isRepeating = false;
       _alarmSound = widget.alarmSettings!.assetAudioPath;
       _alarmOffMethod = 'standard';
-      _customText = '';
+      _alarmName = widget.alarmSettings!.notificationTitle;
+      _textToType = '';
       _selectedGame = 'snake';
       _requiredScore = 5;
       _volume = widget.alarmSettings?.volume ?? 1.0;
@@ -55,7 +59,8 @@ class _EditAlarmScreenState extends State<EditAlarmScreen> {
       _isRepeating = false;
       _alarmSound = 'assets/nokia.mp3';
       _alarmOffMethod = 'standard';
-      _customText = '';
+      _alarmName = '';
+      _textToType = '';
       _selectedGame = 'snake';
       _requiredScore = 5;
       _volume = widget.alarmSettings?.volume ?? 1.0;
@@ -69,7 +74,7 @@ class _EditAlarmScreenState extends State<EditAlarmScreen> {
       appBar: AppBar(
         title: Text(
           widget.alarmSettings == null ? 'הוספת התראה' : 'עריכת התראה',
-          style: TextStyle(fontWeight: FontWeight.bold),
+          style: const TextStyle(fontWeight: FontWeight.bold),
         ),
         elevation: 0,
         backgroundColor: Theme.of(context).colorScheme.primary,
@@ -77,28 +82,21 @@ class _EditAlarmScreenState extends State<EditAlarmScreen> {
         actions: [
           if (widget.alarmSettings != null)
             IconButton(
-              icon: Icon(Icons.delete),
+              icon: const Icon(Icons.delete),
               onPressed: _deleteAlarm,
             ),
         ],
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _buildTitle(),
             _buildTimePicker(),
-            // SizedBox(height: 24),
-            // _buildRepeatOption(),
-            // SizedBox(height: 24),
             _buildSoundAndVolumeSelection(),
-            // _buildSoundSelection(),
-            // SizedBox(: 24),
-            // _buildVolumeSelection(), // הוספנו את זה
-            // SizedBox(height: 24),
             _buildAlarmOffMethod(),
-            SizedBox(height: 32),
+            const SizedBox(height: 32),
             _buildSaveButton(),
           ],
         ),
@@ -106,7 +104,7 @@ class _EditAlarmScreenState extends State<EditAlarmScreen> {
     );
   }
 
-  void _deleteAlarm() async {
+  Future<void> _deleteAlarm() async {
     if (widget.alarmSettings != null) {
       await Alarm.stop(widget.alarmSettings!.id);
       Navigator.of(context).pop(true);
@@ -118,23 +116,23 @@ class _EditAlarmScreenState extends State<EditAlarmScreen> {
       elevation: 4,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text('שם ההתראה', style: Theme.of(context).textTheme.titleLarge),
             Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8.0),
+              padding: const EdgeInsets.symmetric(vertical: 8),
               child: TextFormField(
                 decoration: InputDecoration(
                   labelText: 'הזן שם להתראה',
                   border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8)),
+                      borderRadius: BorderRadius.circular(8),),
                 ),
-                initialValue: _customText,
+                initialValue: _alarmName,
                 onChanged: (value) {
                   setState(() {
-                    _customText = value;
+                    _alarmName = value;
                   });
                 },
               ),
@@ -150,52 +148,43 @@ class _EditAlarmScreenState extends State<EditAlarmScreen> {
       elevation: 4,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text('זמן התראה', style: Theme.of(context).textTheme.titleLarge),
-            SizedBox(height: 16),
-            InkWell(
-              onTap: () async {
-                final TimeOfDay? picked = await showTimePicker(
-                  context: context,
-                  initialTime: TimeOfDay.fromDateTime(_alarmTime),
-                );
-                if (picked != null) {
+            const SizedBox(height: 16),
+            SizedBox(
+              width: 400,
+              height: 70,
+              child: TimePickerSpinnerPopUp(
+                mode: CupertinoDatePickerMode.time,
+                initTime: _alarmTime,
+                barrierColor: Colors.black12,
+                minuteInterval: 1,
+                padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
+                cancelText: 'ביטול',
+                confirmText: 'אישור',
+                radius: 15,
+                pressType: PressType.singlePress,
+                timeFormat: 'HH:mm',
+                locale: const Locale('he', 'IL'),
+                textStyle: const TextStyle(fontSize: 18),
+                onChange: (dateTime) {
                   setState(() {
                     _alarmTime = DateTime(
                       _alarmTime.year,
                       _alarmTime.month,
                       _alarmTime.day,
-                      picked.hour,
-                      picked.minute,
+                      dateTime.hour,
+                      dateTime.minute,
                     );
                   });
-                }
-              },
-              child: Container(
-                padding: EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-                decoration: BoxDecoration(
-                  border:
-                      Border.all(color: Theme.of(context).colorScheme.primary),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      TimeOfDay.fromDateTime(_alarmTime).format(context),
-                      style: Theme.of(context).textTheme.headlineSmall,
-                    ),
-                    Icon(Icons.access_time,
-                        color: Theme.of(context).colorScheme.primary),
-                  ],
-                ),
+                },
               ),
             ),
             SwitchListTile(
-              title: Text('חזור על ההתראה'),
+              title: const Text('חזור על ההתראה'),
               value: _isRepeating,
               onChanged: (bool value) {
                 setState(() {
@@ -227,41 +216,24 @@ class _EditAlarmScreenState extends State<EditAlarmScreen> {
     );
   }
 
-  // Widget _buildRepeatOption() {
-  //   return Card(
-  //     elevation: 4,
-  //     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-  //     child: Padding(
-  //       padding: const EdgeInsets.all(16.0),
-  //       child: Column(
-  //         crossAxisAlignment: CrossAxisAlignment.start,
-  //         children: [
-  //           Text('חזרה', style: Theme.of(context).textTheme.titleLarge),
-
-  //         ],
-  //       ),
-  //     ),
-  //   );
-  // }
-
   Widget _buildSoundAndVolumeSelection() {
-  bool isCustomSound = !_alarmSound.startsWith('assets/');
-  String displayValue = isCustomSound ? 'custom' : _alarmSound;
+  final isCustomSound = !_alarmSound.startsWith('assets/');
+  final displayValue = isCustomSound ? 'custom' : _alarmSound;
 
   return Card(
     elevation: 4,
     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
     child: Padding(
-      padding: const EdgeInsets.all(16.0),
+      padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text('צליל התראה', style: Theme.of(context).textTheme.titleLarge),
-          SizedBox(height: 16),
+          const SizedBox(height: 16),
           DropdownButtonFormField<String>(
             decoration: InputDecoration(
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-              contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             ),
             value: displayValue,
             onChanged: (String? newValue) {
@@ -279,16 +251,16 @@ class _EditAlarmScreenState extends State<EditAlarmScreen> {
                   value: 'assets/${sound['file']}',
                   child: Text(
                     sound['name']!,
-                    style: TextStyle(fontSize: 14),
+                    style: const TextStyle(fontSize: 14),
                     overflow: TextOverflow.ellipsis,
                   ),
                 );
-              }).toList(),
+              }),
               DropdownMenuItem<String>(
                 value: 'custom',
                 child: Text(
                   isCustomSound ? 'קובץ מותאם אישית' : 'בחר קובץ מותאם אישית',
-                  style: TextStyle(fontSize: 14),
+                  style: const TextStyle(fontSize: 14),
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
@@ -297,26 +269,26 @@ class _EditAlarmScreenState extends State<EditAlarmScreen> {
           ),
           if (isCustomSound)
             Padding(
-              padding: const EdgeInsets.only(top: 8.0),
+              padding: const EdgeInsets.only(top: 8),
               child: Row(
                 children: [
                   Expanded(
                     child: Text(
                       'קובץ נבחר: ${_alarmSound.split('/').last}',
-                      style: TextStyle(fontSize: 12),
+                      style: const TextStyle(fontSize: 12),
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
                   TextButton(
                     onPressed: _pickCustomSound,
-                    child: Text('שנה קובץ'),
+                    child: const Text('שנה קובץ'),
                   ),
                 ],
               ),
             ),
-          SizedBox(height: 16),
+          const SizedBox(height: 16),
           SwitchListTile(
-            title: Text('השתמש בעוצמת הקול של המערכת'),
+            title: const Text('השתמש בעוצמת הקול של המערכת'),
             value: _useSystemVolume,
             onChanged: (bool value) {
               setState(() {
@@ -327,10 +299,8 @@ class _EditAlarmScreenState extends State<EditAlarmScreen> {
           if (!_useSystemVolume)
             Slider(
               value: _volume,
-              min: 0.0,
-              max: 1.0,
               divisions: 10,
-              label: (_volume * 100).round().toString() + '%',
+              label: '${(_volume * 100).round()}%',
               onChanged: (double value) {
                 setState(() {
                   _volume = value;
@@ -344,7 +314,7 @@ class _EditAlarmScreenState extends State<EditAlarmScreen> {
 }
 
 Future<void> _pickCustomSound() async {
-  FilePickerResult? result = await FilePicker.platform.pickFiles(
+  final result = await FilePicker.platform.pickFiles(
     type: FileType.audio,
   );
 
@@ -360,32 +330,14 @@ Future<void> _pickCustomSound() async {
       elevation: 4,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Text('שם ההתראה', style: Theme.of(context).textTheme.titleLarge),
-            // Padding(
-            //   padding: const EdgeInsets.symmetric(vertical: 8.0),
-            //   child: TextFormField(
-            //     decoration: InputDecoration(
-            //       labelText: 'הזן שם להתראה',
-            //       border: OutlineInputBorder(
-            //           borderRadius: BorderRadius.circular(8)),
-            //     ),
-            //     initialValue: _customText,
-            //     onChanged: (value) {
-            //       setState(() {
-            //         _customText = value;
-            //       });
-            //     },
-            //   ),
-            // ),
-            SizedBox(height: 16),
             Text('שיטת כיבוי התראה',
-                style: Theme.of(context).textTheme.titleLarge),
+                style: Theme.of(context).textTheme.titleLarge,),
             RadioListTile<String>(
-              title: Text('סטנדרטי'),
+              title: const Text('סטנדרטי'),
               value: 'standard',
               groupValue: _alarmOffMethod,
               onChanged: (String? value) {
@@ -395,7 +347,7 @@ Future<void> _pickCustomSound() async {
               },
             ),
             RadioListTile<String>(
-              title: Text('כתיבת טקסט'),
+              title: const Text('כתיבת טקסט'),
               value: 'text',
               groupValue: _alarmOffMethod,
               onChanged: (String? value) {
@@ -406,22 +358,21 @@ Future<void> _pickCustomSound() async {
             ),
             if (_alarmOffMethod == 'text')
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: TextFormField(
                   decoration: InputDecoration(
-                    labelText: 'הזן טקסט',
-                    border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8)),
+                    labelText: 'טקסט לכיבוי ההתראה',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                   ),
                   onChanged: (value) {
                     setState(() {
-                      _customText = value;
+                      _textToType = value;
                     });
                   },
                 ),
               ),
             RadioListTile<String>(
-              title: Text('משחק'),
+              title: const Text('משחק'),
               value: 'game',
               groupValue: _alarmOffMethod,
               onChanged: (String? value) {
@@ -436,24 +387,23 @@ Future<void> _pickCustomSound() async {
       ),
     );
   }
-
+  
   Widget _buildGameSelection() {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+      padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Column(
         children: [
           DropdownButtonFormField<String>(
             decoration: InputDecoration(
               labelText: 'בחר משחק',
-              labelStyle: TextStyle(fontSize: 14),
+              labelStyle: const TextStyle(fontSize: 14),
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-              contentPadding: EdgeInsets.symmetric(vertical: 10, horizontal: 10),
+              contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 10),
             ),
             value: _selectedGame,
             isExpanded: true,
             items: const [
-              DropdownMenuItem(value: 'snake', child: Text('נחש', style: TextStyle(fontSize: 14))),
-              // DropdownMenuItem(value: 'starwars', child: Text('מלחמת הכוכבים', style: TextStyle(fontSize: 14))),
+              DropdownMenuItem(value: 'snake', child: Text('סנייק', style: TextStyle(fontSize: 14))),
             ],
             onChanged: (String? value) {
               setState(() {
@@ -461,12 +411,12 @@ Future<void> _pickCustomSound() async {
               });
             },
           ),
-          SizedBox(height: 20),
+          const SizedBox(height: 20),
           TextFormField(
             decoration: InputDecoration(
               labelText: 'ניקוד נדרש',
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-              contentPadding: EdgeInsets.symmetric(vertical: 10, horizontal: 10),
+              contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 10),
             ),
             keyboardType: TextInputType.number,
             initialValue: _requiredScore.toString(),
@@ -484,19 +434,19 @@ Future<void> _pickCustomSound() async {
   Widget _buildSaveButton() {
     return Container(
       width: double.infinity,
-      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: ElevatedButton(
         style: ElevatedButton.styleFrom(
           backgroundColor: Theme.of(context).colorScheme.primary,
           foregroundColor: Theme.of(context).colorScheme.onPrimary,
-          padding: EdgeInsets.symmetric(vertical: 16),
+          padding: const EdgeInsets.symmetric(vertical: 16),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),
           elevation: 4,
         ),
         onPressed: _saveAlarm,
-        child: Text(
+        child: const Text(
           'שמור התראה',
           style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
         ),
@@ -504,7 +454,7 @@ Future<void> _pickCustomSound() async {
     );
   }
 
-  void _saveAlarm() async {
+  Future<void> _saveAlarm() async {
     final id = widget.alarmSettings?.id ??
         DateTime.now().millisecondsSinceEpoch % 100000;
 
@@ -515,30 +465,25 @@ Future<void> _pickCustomSound() async {
         .map((entry) => entry.key)
         .toList();
 
-    String alarmOffDetails = '';
-    if (_alarmOffMethod == 'text') {
-      alarmOffDetails = _customText;
-    } else if (_alarmOffMethod == 'game') {
-      alarmOffDetails = '$_selectedGame|$_requiredScore';
+    final notificationBody =
+        'זמן להתעורר! $_alarmOffMethod|$_textToType|$_selectedGame|$_requiredScore|${selectedDaysIndices.join(',')}';
+
+    DateTime scheduledDateTime = _alarmTime;
+    if (!_isRepeating && scheduledDateTime.isBefore(DateTime.now())) {
+      scheduledDateTime = scheduledDateTime.add(const Duration(days: 1));
     }
 
-    final notificationBody =
-        'זמן להתעורר! $_alarmOffMethod|$_customText|$_selectedGame|$_requiredScore|${selectedDaysIndices.join(',')}';
     final alarmSettings = AlarmSettings(
       id: id,
-      dateTime: _alarmTime,
+      dateTime: scheduledDateTime,
       assetAudioPath: _alarmSound,
-      loopAudio: true,
-      vibrate: true,
       volume: _useSystemVolume ? null : _volume,
-      fadeDuration: 0.0,
-      notificationTitle: _customText.isNotEmpty ? _customText : 'התראה',
+      notificationTitle: _alarmName.isNotEmpty ? _alarmName : 'התראה',
       notificationBody: notificationBody,
-      enableNotificationOnKill: true,
     );
 
     if (_isRepeating) {
-      for (int i = 0; i < 7; i++) {
+      for (var i = 0; i < 7; i++) {
         if (_selectedDays[i]) {
           final nextAlarmDay = _getNextWeekday(i);
           final nextAlarmTime = DateTime(
@@ -561,12 +506,33 @@ Future<void> _pickCustomSound() async {
       await Alarm.set(alarmSettings: alarmSettings);
     }
 
+    final now = DateTime.now();
+    final difference = scheduledDateTime.difference(now);
+    final hours = difference.inHours;
+    final minutes = difference.inMinutes.remainder(60);
+
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          'ההתראה הוגדרה לעוד ${hours > 0 ? '$hours שעות ו-' : ''}$minutes דקות',
+          textAlign: TextAlign.right,
+          style: const TextStyle(fontSize: 16),
+        ),
+        duration: const Duration(seconds: 3),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+        ),
+      ),
+    );
+
     Navigator.of(context).pop(true);
   }
 
   DateTime _getNextWeekday(int weekday) {
-    DateTime now = DateTime.now();
-    int daysUntilNextWeekday = weekday - now.weekday;
+    final now = DateTime.now();
+    var daysUntilNextWeekday = weekday - now.weekday;
     if (daysUntilNextWeekday <= 0) {
       daysUntilNextWeekday += 7;
     }

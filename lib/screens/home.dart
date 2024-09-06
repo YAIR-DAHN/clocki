@@ -1,15 +1,14 @@
 import 'dart:async';
 
 import 'package:alarm/alarm.dart';
+import 'package:clocki/screens/contact_us_screen.dart' as contactUs;
+import 'package:clocki/screens/edit_alarm.dart';
+import 'package:clocki/screens/report_issue_screen.dart' as reportIssue;
+import 'package:clocki/screens/ring.dart';
+import 'package:clocki/screens/troubleshooting_screen.dart';
+import 'package:clocki/widgets/alarm_tile.dart';
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
-
-import 'edit_alarm.dart';
-import 'ring.dart';
-import '../widgets/alarm_tile.dart';
-import 'troubleshooting_screen.dart';
-import 'contact_us_screen.dart' as contactUs;
-import 'report_issue_screen.dart' as reportIssue;
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -40,10 +39,10 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void loadAlarms() {
-    final List<AlarmSettings> alarms = Alarm.getAlarms();
-    final Map<String, AlarmGroup> groupMap = {};
+    final alarms = Alarm.getAlarms();
+    final groupMap = <String, AlarmGroup>{};
 
-    for (var alarm in alarms) {
+    for (final alarm in alarms) {
       final key = _getAlarmGroupKey(alarm);
       if (groupMap.containsKey(key)) {
         groupMap[key]!.alarms.add(alarm);
@@ -70,26 +69,34 @@ class _HomeScreenState extends State<HomeScreen> {
   List<int> _getRepeatingDays(AlarmSettings alarm) {
     final parts = alarm.notificationBody.split('|');
     if (parts.length > 4) {
-      return parts[4].split(',').where((s) => s.isNotEmpty).map((e) => int.parse(e)).toList();
+      return parts[4].split(',').where((s) => s.isNotEmpty).map(int.parse).toList();
     }
     return [];
   }
 
   String _getAlarmGroupSubtitle(AlarmGroup alarmGroup) {
     final parts = alarmGroup.baseAlarm.notificationBody.split('|');
-    if (parts.length < 2) return "התראה"; // אם אין מספיק מידע, נחזיר ערך ברירת מחדל
+    if (parts.length < 2) return 'התראה'; // אם אין מספיק מידע, נחזיר ערך ברירת מחדל
 
     final alarmMethod = parts[0].split(' ').last; // מקבל את החלק האחרון אחרי "זמן להתעורר!"
-    final alarmName = parts[1].isNotEmpty ? parts[1] : "התראה";
+    final alarmName = alarmGroup.baseAlarm.notificationTitle; // שם ההתראה
 
-    String subtitle = alarmName;
+    var subtitle = '';
 
-    if (alarmMethod != 'standard') {
-      subtitle += ' - ${_getAlarmMethodText(alarmMethod, parts)}';
+    // הוסף את שם ההתראה אם הוא קיים
+    if (alarmName.isNotEmpty && alarmName != 'התראה') {
+      subtitle += '$alarmName\n';
     }
 
+    // הוסף מידע על שיטת הכיבוי
+    if (alarmMethod != 'standard') {
+      subtitle += '${_getAlarmMethodText(alarmMethod, parts)}';
+    }
+
+    // הוסף מידע על ימים חוזרים
     if (alarmGroup.repeatingDays.isNotEmpty) {
-      subtitle += '\n${_getRepeatingDaysText(alarmGroup.repeatingDays)}';
+      if (subtitle.isNotEmpty) subtitle += '\n';
+      subtitle += '${_getRepeatingDaysText(alarmGroup.repeatingDays)}';
     }
 
     return subtitle;
@@ -111,7 +118,7 @@ class _HomeScreenState extends State<HomeScreen> {
   String _getRepeatingDaysText(List<int> days) {
     if (days.isEmpty) return '';
     final daysOfWeek = ["א'", "ב'", "ג'", "ד'", "ה'", "ו'", "ש'"];
-    final repeatingDays = days.map((day) => daysOfWeek[day]).join(" , ");
+    final repeatingDays = days.map((day) => daysOfWeek[day]).join(' , ');
     return 'חוזר בימים: $repeatingDays';
   }
 
@@ -145,15 +152,42 @@ class _HomeScreenState extends State<HomeScreen> {
     if (res != null && res == true) loadAlarms();
   }
 
-  void _toggleAlarmGroup(AlarmGroup alarmGroup, bool isActive) async {
-    for (var alarm in alarmGroup.alarms) {
+  Future<void> _toggleAlarmGroup(AlarmGroup alarmGroup, bool isActive) async {
+    List<AlarmSettings> updatedAlarms = [];
+    for (final alarm in alarmGroup.alarms) {
       if (isActive) {
-        await Alarm.set(alarmSettings: alarm);
+        // בדיקה אם זמן ההתראה עדיין בעתיד
+        if (alarm.dateTime.isAfter(DateTime.now())) {
+          await Alarm.set(alarmSettings: alarm);
+          updatedAlarms.add(alarm);
+        } else {
+          // אם הזמן עבר, נקבע את ההתראה ליום הבא באותה שעה
+          final nextAlarmTime = DateTime(
+            DateTime.now().year,
+            DateTime.now().month,
+            DateTime.now().day,
+            alarm.dateTime.hour,
+            alarm.dateTime.minute,
+          ).add(const Duration(days: 1));
+          final updatedAlarm = alarm.copyWith(dateTime: nextAlarmTime);
+          await Alarm.set(alarmSettings: updatedAlarm);
+          updatedAlarms.add(updatedAlarm);
+        }
       } else {
         await Alarm.stop(alarm.id);
+        updatedAlarms.add(alarm.copyWith(dateTime: alarm.dateTime.subtract(const Duration(days: 1))));
       }
     }
-    loadAlarms();
+    
+    final updatedAlarmGroup = AlarmGroup(
+      baseAlarm: updatedAlarms.first,
+      alarms: updatedAlarms,
+      repeatingDays: alarmGroup.repeatingDays,
+    );
+    
+    setState(() {
+      alarmGroups[alarmGroups.indexWhere((group) => group.baseAlarm.id == alarmGroup.baseAlarm.id)] = updatedAlarmGroup;
+    });
   }
 
   @override
@@ -162,15 +196,19 @@ class _HomeScreenState extends State<HomeScreen> {
     super.dispose();
   }
 
- @override
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: Text(
           'קלוקי - שעון המעורר שלי',
-          style: Theme.of(context).textTheme.headlineMedium?.copyWith(color: Colors.white),
+          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
         ),
         elevation: 0,
+        backgroundColor: const Color.fromARGB(255, 154, 45, 81),
         actions: [
           PopupMenuButton<String>(
             onSelected: (value) {
@@ -178,21 +216,18 @@ class _HomeScreenState extends State<HomeScreen> {
                 case 'troubleshoot':
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (context) => TroubleshootingScreen()),
+                    MaterialPageRoute(builder: (context) => const TroubleshootingScreen()),
                   );
-                  break;
                 case 'contact':
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (context) => contactUs.ContactUsScreen()),
+                    MaterialPageRoute(builder: (context) => const contactUs.ContactUsScreen()),
                   );
-                  break;
                 case 'report':
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (context) => reportIssue.ContactUsScreen()),
+                    MaterialPageRoute(builder: (context) => const reportIssue.ContactUsScreen()),
                   );
-                  break;
               }
             },
             itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
@@ -204,54 +239,91 @@ class _HomeScreenState extends State<HomeScreen> {
                 value: 'contact',
                 child: Text('צור קשר'),
               ),
-              const PopupMenuItem<String>(
-                value: 'report',
-                child: Text('דיווח על בעיה'),
-              ),
+              // const PopupMenuItem<String>(
+              //   value: 'report',
+              //   child: Text('דיווח על בעיה'),
+              // ),
             ],
           ),
         ],
       ),
-      body: SafeArea(
-        child: alarmGroups.isNotEmpty
-            ? ListView.builder(
-                itemCount: alarmGroups.length,
-                itemBuilder: (context, index) {
-                  final alarmGroup = alarmGroups[index];
-                  return AlarmTile(
-                    key: Key(alarmGroup.baseAlarm.id.toString()),
-                    title: TimeOfDay.fromDateTime(alarmGroup.baseAlarm.dateTime).format(context),
-                    subtitle: _getAlarmGroupSubtitle(alarmGroup),
-                    isActive: alarmGroup.alarms.any((alarm) => alarm.dateTime.isAfter(DateTime.now())),
-                    onPressed: () => navigateToAlarmScreen(alarmGroup.baseAlarm),
-                    onToggle: (bool value) => _toggleAlarmGroup(alarmGroup, value),
-                    onDismissed: () {
-                      for (var alarm in alarmGroup.alarms) {
-                        Alarm.stop(alarm.id);
-                      }
-                      loadAlarms();
-                    },
-                  );
-                },
-              )
-            : Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(Icons.alarm_off, size: 80, color: Colors.grey),
-                    const SizedBox(height: 16),
-                    Text(
-                      'אין התראות מוגדרות',
-                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(color: Colors.grey),
-                    ),
-                  ],
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color.fromARGB(110, 255, 64, 128), Color.fromARGB(255, 244, 239, 238)],
+          ),
+        ),
+        child: SafeArea(
+          child: alarmGroups.isNotEmpty
+              ? ListView.builder(
+                  itemCount: alarmGroups.length,
+                  itemBuilder: (context, index) {
+                    final alarmGroup = alarmGroups[index];
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      child: Card(
+                        elevation: 8,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Dismissible(
+                          key: Key(alarmGroup.baseAlarm.id.toString()),
+                          direction: DismissDirection.endToStart,
+                          background: Container(
+                            alignment: Alignment.centerRight,
+                            decoration: BoxDecoration(
+                              color: Colors.redAccent,
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: const Padding(
+                              padding: EdgeInsets.only(right: 16),
+                              child: Icon(Icons.delete, color: Colors.white, size: 32),
+                            ),
+                          ),
+                          onDismissed: (direction) {
+                            for (final alarm in alarmGroup.alarms) {
+                              Alarm.stop(alarm.id);
+                            }
+                            loadAlarms();
+                          },
+                          child: AlarmTile(
+                            title: TimeOfDay.fromDateTime(alarmGroup.baseAlarm.dateTime).format(context),
+                            subtitle: _getAlarmGroupSubtitle(alarmGroup),
+                            isActive: alarmGroup.alarms.any((alarm) => alarm.dateTime.isAfter(DateTime.now())),
+                            onPressed: () => navigateToAlarmScreen(alarmGroup.baseAlarm),
+                            onToggle: (bool value) => _toggleAlarmGroup(alarmGroup, value),
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                )
+              : Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.alarm_off, size: 120, color: Colors.white.withOpacity(0.7)),
+                      const SizedBox(height: 24),
+                      Text(
+                        'אין התראות מוגדרות',
+                        style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
+        ),
       ),
-      floatingActionButton: FloatingActionButton(
+      floatingActionButton: FloatingActionButton.extended(
         onPressed: () => navigateToAlarmScreen(null),
-        child: const Icon(Icons.add),
-        elevation: 4,
+        elevation: 8,
+        icon: const Icon(Icons.add_alarm),
+        label: const Text('הוסף התראה'),
+        backgroundColor: Colors.deepOrangeAccent,
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
     );
@@ -259,13 +331,13 @@ class _HomeScreenState extends State<HomeScreen> {
 }
 
 class AlarmGroup {
-  final AlarmSettings baseAlarm;
-  final List<AlarmSettings> alarms;
-  final List<int> repeatingDays;
 
   AlarmGroup({
     required this.baseAlarm,
     required this.alarms,
     required this.repeatingDays,
   });
+  final AlarmSettings baseAlarm;
+  final List<AlarmSettings> alarms;
+  final List<int> repeatingDays;
 }
