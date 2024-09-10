@@ -37,7 +37,7 @@ class MyApp extends StatelessWidget {
         );
 
         return MaterialApp(
-          title: 'קלוקי - שעון המעורר שלי',
+          title: 'קלוקי',
           theme: ThemeData(
             useMaterial3: true,
             colorScheme: lightColorScheme,

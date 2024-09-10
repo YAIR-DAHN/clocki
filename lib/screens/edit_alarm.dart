@@ -3,9 +3,9 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:time_picker_spinner_pop_up/time_picker_spinner_pop_up.dart';
-
+import 'package:permission_handler/permission_handler.dart';
+import 'package:clocki/screens/troubleshooting_screen.dart';
 class EditAlarmScreen extends StatefulWidget {
-
   const EditAlarmScreen({super.key, this.alarmSettings});
   final AlarmSettings? alarmSettings;
 
@@ -40,6 +40,47 @@ class EditAlarmScreenState extends State<EditAlarmScreen> {
   void initState() {
     super.initState();
     _initializeAlarmSettings();
+    _checkPermissions();
+  }
+  Future<void> _checkPermissions() async {
+    final backgroundStatus = await Permission.ignoreBatteryOptimizations.status;
+    final batteryStatus = await Permission.ignoreBatteryOptimizations.status;
+    
+    if (!backgroundStatus.isGranted || !batteryStatus.isGranted) {
+      if (mounted) {
+        _showPermissionDialog();
+      }
+    }
+  }
+
+  void _showPermissionDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('אישור הרשאות'),
+          content: const Text('כדי להבטיח את פעולת ההתראה, מומלץ לאשר את הפעלת האפליקציה ברקע וביטול אופטימיזציית הסוללה.'),
+          actions: <Widget>[
+            TextButton(
+              child: const Text('התעלם'),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+            TextButton(
+              child: const Text('אשר הרשאות'),
+              onPressed: () {
+                Navigator.of(context).pop();
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const TroubleshootingScreen()),
+                );
+              },
+            ),
+          ],
+        );
+      },
+    );
   }
 
   void _initializeAlarmSettings() {
@@ -127,7 +168,8 @@ class EditAlarmScreenState extends State<EditAlarmScreen> {
                 decoration: InputDecoration(
                   labelText: 'הזן שם להתראה',
                   border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
                 ),
                 initialValue: _alarmName,
                 onChanged: (value) {
@@ -217,113 +259,116 @@ class EditAlarmScreenState extends State<EditAlarmScreen> {
   }
 
   Widget _buildSoundAndVolumeSelection() {
-  final isCustomSound = !_alarmSound.startsWith('assets/');
-  final displayValue = isCustomSound ? 'custom' : _alarmSound;
+    final isCustomSound = !_alarmSound.startsWith('assets/');
+    final displayValue = isCustomSound ? 'custom' : _alarmSound;
 
-  return Card(
-    elevation: 4,
-    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-    child: Padding(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('צליל התראה', style: Theme.of(context).textTheme.titleLarge),
-          const SizedBox(height: 16),
-          DropdownButtonFormField<String>(
-            decoration: InputDecoration(
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            ),
-            value: displayValue,
-            onChanged: (String? newValue) {
-              setState(() {
-                if (newValue == 'custom') {
-                  _pickCustomSound();
-                } else {
-                  _alarmSound = newValue!;
-                }
-              });
-            },
-            items: [
-              ..._availableSounds.map<DropdownMenuItem<String>>((Map<String, String> sound) {
-                return DropdownMenuItem<String>(
-                  value: 'assets/${sound['file']}',
+    return Card(
+      elevation: 4,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('צליל התראה', style: Theme.of(context).textTheme.titleLarge),
+            const SizedBox(height: 16),
+            DropdownButtonFormField<String>(
+              decoration: InputDecoration(
+                border:
+                    OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              ),
+              value: displayValue,
+              onChanged: (String? newValue) {
+                setState(() {
+                  if (newValue == 'custom') {
+                    _pickCustomSound();
+                  } else {
+                    _alarmSound = newValue!;
+                  }
+                });
+              },
+              items: [
+                ..._availableSounds
+                    .map<DropdownMenuItem<String>>((Map<String, String> sound) {
+                  return DropdownMenuItem<String>(
+                    value: 'assets/${sound['file']}',
+                    child: Text(
+                      sound['name']!,
+                      style: const TextStyle(fontSize: 14),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  );
+                }),
+                DropdownMenuItem<String>(
+                  value: 'custom',
                   child: Text(
-                    sound['name']!,
+                    isCustomSound ? 'קובץ מותאם אישית' : 'בחר קובץ מותאם אישית',
                     style: const TextStyle(fontSize: 14),
                     overflow: TextOverflow.ellipsis,
                   ),
-                );
-              }),
-              DropdownMenuItem<String>(
-                value: 'custom',
-                child: Text(
-                  isCustomSound ? 'קובץ מותאם אישית' : 'בחר קובץ מותאם אישית',
-                  style: const TextStyle(fontSize: 14),
-                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+              isExpanded: true,
+            ),
+            if (isCustomSound)
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        'קובץ נבחר: ${_alarmSound.split('/').last}',
+                        style: const TextStyle(fontSize: 12),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: _pickCustomSound,
+                      child: const Text('שנה קובץ'),
+                    ),
+                  ],
                 ),
               ),
-            ],
-            isExpanded: true,
-          ),
-          if (isCustomSound)
-            Padding(
-              padding: const EdgeInsets.only(top: 8),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      'קובץ נבחר: ${_alarmSound.split('/').last}',
-                      style: const TextStyle(fontSize: 12),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                  TextButton(
-                    onPressed: _pickCustomSound,
-                    child: const Text('שנה קובץ'),
-                  ),
-                ],
-              ),
-            ),
-          const SizedBox(height: 16),
-          SwitchListTile(
-            title: const Text('השתמש בעוצמת הקול של המערכת'),
-            value: _useSystemVolume,
-            onChanged: (bool value) {
-              setState(() {
-                _useSystemVolume = value;
-              });
-            },
-          ),
-          if (!_useSystemVolume)
-            Slider(
-              value: _volume,
-              divisions: 10,
-              label: '${(_volume * 100).round()}%',
-              onChanged: (double value) {
+            const SizedBox(height: 16),
+            SwitchListTile(
+              title: const Text('השתמש בעוצמת הקול של המערכת'),
+              value: _useSystemVolume,
+              onChanged: (bool value) {
                 setState(() {
-                  _volume = value;
+                  _useSystemVolume = value;
                 });
               },
             ),
-        ],
+            if (!_useSystemVolume)
+              Slider(
+                value: _volume,
+                divisions: 10,
+                label: '${(_volume * 100).round()}%',
+                onChanged: (double value) {
+                  setState(() {
+                    _volume = value;
+                  });
+                },
+              ),
+          ],
+        ),
       ),
-    ),
-  );
-}
-
-Future<void> _pickCustomSound() async {
-  final result = await FilePicker.platform.pickFiles(
-    type: FileType.audio,
-  );
-
-  if (result != null) {
-    setState(() {
-      _alarmSound = result.files.single.path!;
-    });
+    );
   }
-}
+
+  Future<void> _pickCustomSound() async {
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.audio,
+    );
+
+    if (result != null) {
+      setState(() {
+        _alarmSound = result.files.single.path!;
+      });
+    }
+  }
 
   Widget _buildAlarmOffMethod() {
     return Card(
@@ -334,8 +379,10 @@ Future<void> _pickCustomSound() async {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('שיטת כיבוי התראה',
-                style: Theme.of(context).textTheme.titleLarge,),
+            Text(
+              'שיטת כיבוי התראה',
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
             RadioListTile<String>(
               title: const Text('סטנדרטי'),
               value: 'standard',
@@ -362,7 +409,8 @@ Future<void> _pickCustomSound() async {
                 child: TextFormField(
                   decoration: InputDecoration(
                     labelText: 'טקסט לכיבוי ההתראה',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8)),
                   ),
                   onChanged: (value) {
                     setState(() {
@@ -387,7 +435,7 @@ Future<void> _pickCustomSound() async {
       ),
     );
   }
-  
+
   Widget _buildGameSelection() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -397,13 +445,17 @@ Future<void> _pickCustomSound() async {
             decoration: InputDecoration(
               labelText: 'בחר משחק',
               labelStyle: const TextStyle(fontSize: 14),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-              contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 10),
+              border:
+                  OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+              contentPadding:
+                  const EdgeInsets.symmetric(vertical: 10, horizontal: 10),
             ),
             value: _selectedGame,
             isExpanded: true,
             items: const [
-              DropdownMenuItem(value: 'snake', child: Text('סנייק', style: TextStyle(fontSize: 14))),
+              DropdownMenuItem(
+                  value: 'snake',
+                  child: Text('סנייק', style: TextStyle(fontSize: 14))),
             ],
             onChanged: (String? value) {
               setState(() {
@@ -415,8 +467,10 @@ Future<void> _pickCustomSound() async {
           TextFormField(
             decoration: InputDecoration(
               labelText: 'ניקוד נדרש',
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-              contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 10),
+              border:
+                  OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+              contentPadding:
+                  const EdgeInsets.symmetric(vertical: 10, horizontal: 10),
             ),
             keyboardType: TextInputType.number,
             initialValue: _requiredScore.toString(),
@@ -455,6 +509,7 @@ Future<void> _pickCustomSound() async {
   }
 
   Future<void> _saveAlarm() async {
+    await _checkPermissions();
     final id = widget.alarmSettings?.id ??
         DateTime.now().millisecondsSinceEpoch % 100000;
 
@@ -468,24 +523,13 @@ Future<void> _pickCustomSound() async {
     final notificationBody =
         'זמן להתעורר! $_alarmOffMethod|$_textToType|$_selectedGame|$_requiredScore|${selectedDaysIndices.join(',')}';
 
+    final now = DateTime.now();
     DateTime scheduledDateTime = _alarmTime;
-    if (!_isRepeating && scheduledDateTime.isBefore(DateTime.now())) {
-      scheduledDateTime = scheduledDateTime.add(const Duration(days: 1));
-    }
-
-    final alarmSettings = AlarmSettings(
-      id: id,
-      dateTime: scheduledDateTime,
-      assetAudioPath: _alarmSound,
-      volume: _useSystemVolume ? null : _volume,
-      notificationTitle: _alarmName.isNotEmpty ? _alarmName : 'התראה',
-      notificationBody: notificationBody,
-    );
 
     if (_isRepeating) {
       for (var i = 0; i < 7; i++) {
         if (_selectedDays[i]) {
-          final nextAlarmDay = _getNextWeekday(i);
+          final nextAlarmDay = _getNextWeekday(i, includeToday: true);
           final nextAlarmTime = DateTime(
             nextAlarmDay.year,
             nextAlarmDay.month,
@@ -494,19 +538,41 @@ Future<void> _pickCustomSound() async {
             _alarmTime.minute,
           );
 
-          final repeatingAlarmSettings = alarmSettings.copyWith(
-            id: id + i + 1,
-            dateTime: nextAlarmTime,
-          );
+          if (nextAlarmTime.isAfter(now)) {
+            final repeatingAlarmSettings = AlarmSettings(
+              id: id + i + 1,
+              dateTime: nextAlarmTime,
+              assetAudioPath: _alarmSound,
+              volume: _useSystemVolume ? null : _volume,
+              notificationTitle: _alarmName.isNotEmpty ? _alarmName : 'התראה',
+              notificationBody: notificationBody,
+            );
 
-          await Alarm.set(alarmSettings: repeatingAlarmSettings);
+            await Alarm.set(alarmSettings: repeatingAlarmSettings);
+
+            if (nextAlarmTime.isBefore(scheduledDateTime)) {
+              scheduledDateTime = nextAlarmTime;
+            }
+          }
         }
       }
     } else {
+      if (scheduledDateTime.isBefore(now)) {
+        scheduledDateTime = scheduledDateTime.add(const Duration(days: 1));
+      }
+
+      final alarmSettings = AlarmSettings(
+        id: id,
+        dateTime: scheduledDateTime,
+        assetAudioPath: _alarmSound,
+        volume: _useSystemVolume ? null : _volume,
+        notificationTitle: _alarmName.isNotEmpty ? _alarmName : 'התראה',
+        notificationBody: notificationBody,
+      );
+
       await Alarm.set(alarmSettings: alarmSettings);
     }
 
-    final now = DateTime.now();
     final difference = scheduledDateTime.difference(now);
     final hours = difference.inHours;
     final minutes = difference.inMinutes.remainder(60);
@@ -530,14 +596,13 @@ Future<void> _pickCustomSound() async {
     Navigator.of(context).pop(true);
   }
 
-  DateTime _getNextWeekday(int weekday) {
+  DateTime _getNextWeekday(int weekday, {bool includeToday = false}) {
     final now = DateTime.now();
     var daysUntilNextWeekday = weekday - now.weekday;
-    if (daysUntilNextWeekday <= 0) {
+    if (daysUntilNextWeekday < 0 ||
+        (!includeToday && daysUntilNextWeekday == 0)) {
       daysUntilNextWeekday += 7;
     }
     return now.add(Duration(days: daysUntilNextWeekday));
   }
-
-  
 }

@@ -100,7 +100,7 @@ class _ContactUsScreenState extends State<ContactUsScreen> {
       }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('לא ניתן לפתוח את האפליקציה: $e')),
+        SnackBar(content: Text('לא הצלחנו לפתוח את האפליקציה')),
       );
     }
   }
